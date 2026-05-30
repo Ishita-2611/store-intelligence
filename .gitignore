@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+env/
+.env
+
+# Large/source challenge assets stay outside the repo.
+*.mp4
+*.zip
+*.xlsx
+*.xls
+*.csv
+*.pdf
+
