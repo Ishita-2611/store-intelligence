@@ -2,14 +2,27 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 
+from .errors import StoreUnavailableError
 from .ingestion import store
+from .logging import configure_logging, structured_request_logger
 from .metrics import compute_anomalies, compute_funnel, compute_heatmap, compute_metrics, health_snapshot
 from .models import IngestRequest, IngestResponse
 
 
 app = FastAPI(title="Store Intelligence API", version="0.2.0")
+configure_logging()
+app.middleware("http")(structured_request_logger)
+
+
+@app.exception_handler(StoreUnavailableError)
+async def store_unavailable_handler(_request: Request, exc: StoreUnavailableError) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={"error": {"code": "STORE_UNAVAILABLE", "message": str(exc)}},
+    )
 
 
 @app.post("/events/ingest", response_model=IngestResponse)
@@ -47,4 +60,3 @@ def get_anomalies(store_id: str) -> dict:
 @app.get("/health")
 def get_health() -> dict:
     return health_snapshot(store.all_events())
-

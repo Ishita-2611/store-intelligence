@@ -94,3 +94,54 @@ def test_funnel_heatmap_anomalies_and_health() -> None:
     assert isinstance(anomalies["anomalies"], list)
     assert health["stores"]["ST1008"]["warning"] == "STALE_FEED"
 
+
+def test_zero_purchase_and_all_staff_edge_cases() -> None:
+    all_staff = [
+        event("staff-1", "VIS_STAFF", "ZONE_ENTER", "2026-04-10T11:00:00Z", "BACK_OF_HOUSE", is_staff=True),
+        event("staff-2", "VIS_STAFF", "ZONE_EXIT", "2026-04-10T11:02:00Z", "BACK_OF_HOUSE", dwell_ms=120000, is_staff=True),
+    ]
+    client.post("/events/ingest", json={"events": all_staff})
+
+    metrics = client.get("/stores/ST1008/metrics").json()
+    funnel = client.get("/stores/ST1008/funnel").json()
+
+    assert metrics["unique_visitors"] == 0
+    assert metrics["conversion_rate"] == 0.0
+    assert metrics["event_count"] == 0
+    assert [stage["count"] for stage in funnel["stages"]] == [0, 0, 0, 0]
+
+
+def test_reentry_does_not_double_count_session() -> None:
+    reentry_events = [
+        event("r1", "VIS_1", "ENTRY", "2026-04-10T12:00:00Z"),
+        event("r2", "VIS_1", "EXIT", "2026-04-10T12:10:00Z"),
+        event("r3", "VIS_1", "REENTRY", "2026-04-10T12:15:00Z"),
+        event("r4", "VIS_1", "ZONE_ENTER", "2026-04-10T12:16:00Z", "SKINCARE"),
+    ]
+    client.post("/events/ingest", json={"events": reentry_events})
+
+    metrics = client.get("/stores/ST1008/metrics").json()
+    funnel = client.get("/stores/ST1008/funnel").json()
+
+    assert metrics["unique_visitors"] == 1
+    assert funnel["stages"][0]["count"] == 1
+
+
+def test_store_unavailable_returns_structured_503() -> None:
+    store.set_available(False)
+
+    response = client.get("/stores/ST1008/metrics")
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "STORE_UNAVAILABLE"
+
+
+def test_request_logging_includes_trace_and_event_count(caplog) -> None:
+    caplog.set_level("INFO", logger="store_intelligence")
+
+    response = client.post("/events/ingest", headers={"x-trace-id": "trace-test"}, json={"events": [seed_events()[0]]})
+
+    assert response.status_code == 200
+    assert response.headers["x-trace-id"] == "trace-test"
+    assert '"trace_id":"trace-test"' in caplog.text
+    assert '"event_count":1' in caplog.text

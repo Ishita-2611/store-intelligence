@@ -54,3 +54,38 @@ Run tests:
 ```powershell
 python -m pytest tests -q
 ```
+
+## Part C: Production Readiness
+
+Run with Docker Compose:
+
+```powershell
+docker compose up --build
+```
+
+Five-command local setup:
+
+```powershell
+git clone https://github.com/Ishita-2611/store-intelligence.git
+cd store-intelligence
+pip install -r requirements.txt
+python -m pytest --cov=app --cov=pipeline --cov-report=term-missing tests
+uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+Production behaviors currently included:
+
+- Container entrypoint via `docker-compose.yml`.
+- Structured JSON request logs with `trace_id`, `store_id`, `endpoint`, `latency_ms`, `event_count`, and `status_code`.
+- Idempotent ingest by `event_id`.
+- Partial-success ingest responses for malformed events.
+- Structured `503` response if the event store is unavailable.
+- Tests for empty/all-staff traffic, zero purchases, re-entry deduplication, idempotent ingest, health, and API analytics.
+
+Load generated Part A events into the running API:
+
+```powershell
+$events = Get-Content outputs\events_part_a.jsonl | ForEach-Object { $_ | ConvertFrom-Json }
+Invoke-RestMethod -Uri http://127.0.0.1:8000/events/ingest -Method Post -ContentType application/json -Body (@{events=@($events | Select-Object -First 500)} | ConvertTo-Json -Depth 20)
+Invoke-RestMethod -Uri http://127.0.0.1:8000/events/ingest -Method Post -ContentType application/json -Body (@{events=@($events | Select-Object -Skip 500)} | ConvertTo-Json -Depth 20)
+```
