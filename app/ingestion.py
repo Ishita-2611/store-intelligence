@@ -1,0 +1,54 @@
+from __future__ import annotations
+
+from collections import defaultdict
+from threading import Lock
+
+from pydantic import ValidationError
+
+from .models import StoreEvent
+
+
+class EventStore:
+    def __init__(self) -> None:
+        self._events_by_id: dict[str, StoreEvent] = {}
+        self._events_by_store: dict[str, list[StoreEvent]] = defaultdict(list)
+        self._lock = Lock()
+
+    def ingest(self, raw_events: list[dict]) -> dict:
+        accepted = 0
+        duplicates = 0
+        errors: list[dict] = []
+
+        with self._lock:
+            for index, raw in enumerate(raw_events):
+                try:
+                    event = StoreEvent.model_validate(raw)
+                except ValidationError as exc:
+                    errors.append({"index": index, "event_id": raw.get("event_id"), "errors": exc.errors()})
+                    continue
+
+                if event.event_id in self._events_by_id:
+                    duplicates += 1
+                    continue
+
+                self._events_by_id[event.event_id] = event
+                self._events_by_store[event.store_id].append(event)
+                accepted += 1
+
+        return {"accepted": accepted, "duplicates": duplicates, "rejected": len(errors), "errors": errors}
+
+    def by_store(self, store_id: str) -> list[StoreEvent]:
+        return sorted(self._events_by_store.get(store_id, []), key=lambda event: event.timestamp)
+
+    def all_events(self) -> list[StoreEvent]:
+        events = list(self._events_by_id.values())
+        return sorted(events, key=lambda event: event.timestamp)
+
+    def reset(self) -> None:
+        with self._lock:
+            self._events_by_id.clear()
+            self._events_by_store.clear()
+
+
+store = EventStore()
+

@@ -25,3 +25,32 @@ The event stream is newline-delimited JSON and follows the challenge schema:
 - `is_staff=true` for tracks observed in staff/back-of-house zones.
 
 The current baseline uses OpenCV HOG person detection plus background-subtraction fallback. This avoids external model downloads and gives us a reproducible event contract. A heavier detector such as YOLOv8/RT-DETR can replace `detect_people()` later without changing downstream API work.
+
+## Part B: Intelligence API
+
+Start the API:
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+Open the interactive docs:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Implemented endpoints:
+
+- `POST /events/ingest` accepts up to 500 events, validates each event, deduplicates by `event_id`, and returns partial-success errors.
+- `GET /stores/{store_id}/metrics` returns unique visitors, conversion rate, average dwell by zone, queue depth, and abandonment rate.
+- `GET /stores/{store_id}/funnel` returns session-based Entry -> Zone Visit -> Billing Queue -> Purchase counts and drop-off.
+- `GET /stores/{store_id}/heatmap` returns zone visit frequency, average dwell, normalized heat score, and a low-confidence flag for small samples.
+- `GET /stores/{store_id}/anomalies` returns queue, conversion, dead-zone, or no-traffic anomalies with suggested actions.
+- `GET /health` returns latest event timestamps per store and `STALE_FEED` warnings.
+
+Run tests:
+
+```powershell
+python -m pytest tests -q
+```
