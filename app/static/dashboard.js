@@ -257,8 +257,14 @@ function staleFeedDetail(health) {
 function uploadDetail(upload) {
   if (!upload || upload.status === "idle") return "Upload CCTV to run a new analysis. Sample replay is only for quick demo data.";
   if (upload.status === "queued") return "Queued for analysis.";
-  if (upload.status === "processing") return "Detector is converting footage into customer journey events.";
+  if (upload.status === "processing") {
+    const windowSeconds = upload.analysis_window_seconds || 60;
+    return `Detector is analyzing the first ${Math.round(windowSeconds)} seconds of uploaded footage.`;
+  }
   if (upload.status === "completed") {
+    if (!upload.accepted_events) {
+      return "Analysis completed, but no customer events were detected. Try CAM 1, CAM 2, CAM 3, CAM 5, or the full CCTV ZIP; CAM 4 is staff-only.";
+    }
     return `${numberFmt.format(upload.accepted_events || 0)} events loaded, ${numberFmt.format(upload.rejected_events || 0)} rejected.`;
   }
   if (upload.status === "failed") return upload.error || "Upload analysis failed.";

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from starlette.datastructures import UploadFile
 
 from app.main import app
+from app import uploads
 from app.uploads import UploadJob, ensure_zip, upload_controller
 
 
@@ -96,3 +97,26 @@ def test_reset_returns_immediately_while_detector_is_stopping(monkeypatch) -> No
     assert time.perf_counter() - started < 0.1
     assert upload_controller.latest() is None
     assert stopped.wait(timeout=1)
+
+
+def test_uploaded_detector_uses_bounded_analysis_window(monkeypatch, tmp_path) -> None:
+    captured = {}
+    source_zip = tmp_path / "clip.zip"
+    with zipfile.ZipFile(source_zip, "w") as archive:
+        archive.writestr("CCTV Footage/CAM 3.mp4", b"fake-video")
+
+    def fake_run_detector(command, _controller):
+        captured["command"] = command
+        out_path = command[command.index("--out") + 1]
+        open(out_path, "w", encoding="utf-8").close()
+        return uploads.subprocess.CompletedProcess(command, 0, stdout="wrote 0 events", stderr="")
+
+    monkeypatch.setattr(uploads, "run_detector", fake_run_detector)
+    with upload_controller._lock:
+        upload_controller._jobs["bounded"] = UploadJob(job_id="bounded", filename="clip.zip")
+        generation = upload_controller._generation
+
+    upload_controller._process("bounded", source_zip, generation)
+
+    assert captured["command"][captured["command"].index("--sample-stride") + 1] == "20"
+    assert captured["command"][captured["command"].index("--max-seconds") + 1] == "60.0"

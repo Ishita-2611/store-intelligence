@@ -122,6 +122,8 @@ Use **Replay sample** to stream the prepared Part A event file into the API in t
 
 Use **Analyze footage** to upload a CCTV `.zip` or `.mp4` from the dashboard. The API runs the Part A detector in the background, ingests the generated events, and refreshes the analytics from that uploaded footage.
 
+For hosted demos, uploaded footage is analyzed with a bounded pass over the first 60 seconds so Render's free instance can return results quickly. Use `UPLOAD_MAX_SECONDS` and `UPLOAD_SAMPLE_STRIDE` environment variables to tune that window.
+
 Dashboard support endpoints:
 
 - `POST /demo/replay/start`

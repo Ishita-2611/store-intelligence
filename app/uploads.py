@@ -21,6 +21,8 @@ from .ingestion import store
 
 UPLOAD_DIR = Path("outputs/uploads")
 LAYOUT_PATH = Path("data/store_layout.json")
+UPLOAD_SAMPLE_STRIDE = int(os.getenv("UPLOAD_SAMPLE_STRIDE", "20"))
+UPLOAD_MAX_SECONDS = float(os.getenv("UPLOAD_MAX_SECONDS", "60"))
 
 
 @dataclass
@@ -34,6 +36,7 @@ class UploadJob:
     completed_at: str | None = None
     error: str | None = None
     events_path: str | None = None
+    analysis_window_seconds: float = UPLOAD_MAX_SECONDS
 
 
 class UploadController:
@@ -108,7 +111,9 @@ class UploadController:
                 "--out",
                 str(events_path),
                 "--sample-stride",
-                "10",
+                str(UPLOAD_SAMPLE_STRIDE),
+                "--max-seconds",
+                str(UPLOAD_MAX_SECONDS),
             ]
             completed = run_detector(command, self)
             if self._is_cancelled(job_id, generation):
