@@ -76,6 +76,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 Production behaviors currently included:
 
 - Container entrypoint via `docker-compose.yml`.
+- Slim API container using `requirements-api.txt`; local `requirements.txt` keeps detection/test dependencies.
 - Structured JSON request logs with `trace_id`, `store_id`, `endpoint`, `latency_ms`, `event_count`, and `status_code`.
 - Idempotent ingest by `event_id`.
 - Partial-success ingest responses for malformed events.
