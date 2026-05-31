@@ -4,6 +4,12 @@ const numberFmt = new Intl.NumberFormat("en-IN");
 const els = {
   startReplay: document.querySelector("#startReplay"),
   resetReplay: document.querySelector("#resetReplay"),
+  uploadForm: document.querySelector("#uploadForm"),
+  cctvFile: document.querySelector("#cctvFile"),
+  fileName: document.querySelector("#fileName"),
+  uploadButton: document.querySelector("#uploadButton"),
+  uploadStatus: document.querySelector("#uploadStatus"),
+  uploadDetail: document.querySelector("#uploadDetail"),
   healthDot: document.querySelector("#healthDot"),
   healthText: document.querySelector("#healthText"),
   healthDetail: document.querySelector("#healthDetail"),
@@ -36,10 +42,37 @@ els.resetReplay.addEventListener("click", async () => {
   await refresh();
 });
 
+els.cctvFile.addEventListener("change", () => {
+  const file = els.cctvFile.files[0];
+  els.fileName.textContent = file ? file.name : "Choose CCTV footage";
+});
+
+els.uploadForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const file = els.cctvFile.files[0];
+  if (!file) {
+    renderUpload({ status: "idle" }, "Select a CCTV ZIP or MP4 file first.");
+    return;
+  }
+
+  els.uploadButton.disabled = true;
+  const form = new FormData();
+  form.append("file", file);
+  try {
+    const job = await uploadCctv(form);
+    renderUpload(job);
+  } catch (error) {
+    renderUpload({ status: "failed", error: error.message });
+  } finally {
+    els.uploadButton.disabled = false;
+  }
+});
+
 async function refresh() {
-  const [health, replay, metrics, funnel, heatmap, anomalies] = await Promise.all([
+  const [health, replay, upload, metrics, funnel, heatmap, anomalies] = await Promise.all([
     getJson("/health"),
     getJson("/demo/replay/status"),
+    getJson("/uploads/cctv/latest"),
     getJson(`/stores/${storeId}/metrics`),
     getJson(`/stores/${storeId}/funnel`),
     getJson(`/stores/${storeId}/heatmap`),
@@ -48,6 +81,7 @@ async function refresh() {
 
   renderHealth(health);
   renderReplay(replay);
+  renderUpload(upload);
   renderMetrics(metrics, heatmap);
   renderFunnel(funnel);
   renderHeatmap(heatmap);
@@ -75,6 +109,14 @@ function renderReplay(replay) {
   els.replayCounts.textContent = `${numberFmt.format(ingested)} / ${numberFmt.format(total)} events`;
   els.replayBar.style.width = `${pct}%`;
   els.startReplay.disabled = replay.running;
+}
+
+function renderUpload(upload, overrideDetail) {
+  const status = upload.status || "idle";
+  const filename = upload.filename ? ` for ${upload.filename}` : "";
+  els.uploadStatus.textContent = label(status === "idle" ? "No upload running" : `${status}${filename}`);
+  els.uploadDetail.textContent = overrideDetail || uploadDetail(upload);
+  els.uploadButton.disabled = status === "queued" || status === "processing";
 }
 
 function renderMetrics(metrics, heatmap) {
@@ -161,6 +203,16 @@ async function postJson(url) {
   return response.json();
 }
 
+async function uploadCctv(form) {
+  const response = await fetch("/uploads/cctv", {
+    method: "POST",
+    headers: { "x-trace-id": `dashboard-upload-${Date.now()}` },
+    body: form,
+  });
+  if (!response.ok) throw new Error(`/uploads/cctv returned ${response.status}`);
+  return response.json();
+}
+
 function percent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -178,6 +230,17 @@ function staleFeedDetail(health) {
   if (!stale || !stale.last_event_timestamp) return "Historical replay feed";
   const last = new Date(stale.last_event_timestamp);
   return `Last event ${last.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function uploadDetail(upload) {
+  if (!upload || upload.status === "idle") return "Use replay for the sample dataset, or upload fresh CCTV for a new analysis run.";
+  if (upload.status === "queued") return "Queued for analysis.";
+  if (upload.status === "processing") return "Detector is converting footage into customer journey events.";
+  if (upload.status === "completed") {
+    return `${numberFmt.format(upload.accepted_events || 0)} events loaded, ${numberFmt.format(upload.rejected_events || 0)} rejected.`;
+  }
+  if (upload.status === "failed") return upload.error || "Upload analysis failed.";
+  return "Waiting for upload status.";
 }
 
 refresh();

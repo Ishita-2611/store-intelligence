@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -12,6 +12,7 @@ from .logging import configure_logging, structured_request_logger
 from .metrics import compute_anomalies, compute_funnel, compute_heatmap, compute_metrics, health_snapshot
 from .models import IngestRequest, IngestResponse
 from .replay import replay_controller
+from .uploads import upload_controller
 
 
 app = FastAPI(title="Store Intelligence API", version="0.2.0")
@@ -94,3 +95,22 @@ def reset_demo_replay() -> dict:
 @app.get("/demo/replay/status")
 def get_demo_replay_status() -> dict:
     return replay_controller.status()
+
+
+@app.post("/uploads/cctv")
+def upload_cctv(file: UploadFile = File(...)) -> dict:
+    job = upload_controller.create_job(file)
+    return job.__dict__.copy()
+
+
+@app.get("/uploads/cctv/latest")
+def get_latest_upload() -> dict:
+    return upload_controller.latest() or {"status": "idle"}
+
+
+@app.get("/uploads/cctv/{job_id}")
+def get_upload_status(job_id: str) -> dict:
+    status = upload_controller.status(job_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail={"message": "upload job not found"})
+    return status

@@ -153,9 +153,20 @@ h2 {
   margin: 18px 0;
 }
 
+.upload-band {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.1fr) minmax(320px, 0.95fr) minmax(260px, 0.8fr);
+  gap: 14px;
+  align-items: stretch;
+  margin-bottom: 14px;
+}
+
 .status-pill,
 .replay-meter,
 .last-poll,
+.upload-copy,
+.upload-form,
+.upload-status,
 .kpi-grid article,
 .panel {
   background: rgba(255, 255, 255, 0.96);
@@ -249,6 +260,78 @@ h2 {
   min-height: 76px;
   align-content: center;
   padding: 14px 16px;
+}
+
+.upload-copy,
+.upload-form,
+.upload-status {
+  min-height: 116px;
+  padding: 16px;
+}
+
+.upload-copy {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+}
+
+.upload-copy p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.upload-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 10px;
+  align-content: center;
+}
+
+.upload-form input[type="file"] {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.file-picker {
+  min-width: 0;
+  min-height: 48px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  border: 1px dashed rgba(111, 45, 189, 0.42);
+  border-radius: 8px;
+  background: var(--purplle-soft);
+  color: var(--purplle-deep);
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.file-picker span {
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-picker small,
+.upload-status span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.upload-status {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+}
+
+.upload-status strong {
+  font-size: 14px;
 }
 
 .kpi-grid {
@@ -451,7 +534,8 @@ h2 {
 
 @media (max-width: 1040px) {
   .topbar,
-  .control-band {
+  .control-band,
+  .upload-band {
     grid-template-columns: 1fr;
   }
 
@@ -496,6 +580,7 @@ h2 {
   }
 
   .actions,
+  .upload-form,
   .kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -512,7 +597,10 @@ h2 {
 
   .status-pill,
   .last-poll,
-  .replay-meter {
+  .replay-meter,
+  .upload-copy,
+  .upload-form,
+  .upload-status {
     min-height: 64px;
     padding: 12px;
   }
@@ -552,6 +640,7 @@ h2 {
 @media (max-width: 460px) {
   .actions,
   .control-band,
+  .upload-form,
   .kpi-grid {
     grid-template-columns: 1fr;
   }

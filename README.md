@@ -112,8 +112,13 @@ http://127.0.0.1:8000/dashboard
 
 Use **Start live replay** to stream the generated Part A event file into the API in timed batches. The KPI strip, funnel, heatmap, anomaly panel, and dwell ranking update while the replay runs.
 
+Use **Analyze footage** to upload a CCTV `.zip` or `.mp4` from the dashboard. The API runs the Part A detector in the background, ingests the generated events, and refreshes the analytics from that uploaded footage.
+
 Dashboard support endpoints:
 
 - `POST /demo/replay/start`
 - `POST /demo/replay/reset`
 - `GET /demo/replay/status`
+- `POST /uploads/cctv`
+- `GET /uploads/cctv/latest`
+- `GET /uploads/cctv/{job_id}`
