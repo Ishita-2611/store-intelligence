@@ -52,6 +52,12 @@ def get_metrics(store_id: str) -> dict:
     return {"store_id": store_id, **compute_metrics(events)}
 
 
+@app.get("/Metrics")
+@app.get("/metrics")
+def get_default_metrics() -> dict:
+    return get_metrics("ST1008")
+
+
 @app.get("/stores/{store_id}/funnel")
 def get_funnel(store_id: str) -> dict:
     events = store.by_store(store_id)

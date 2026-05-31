@@ -95,6 +95,8 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/events/ingest -Method Post -Content
 
 Documentation for the AI-assisted engineering decisions is in:
 
+- `DESIGN.md`
+- `CHOICES.md`
 - `docs/DESIGN.md`
 - `docs/CHOICES.md`
 

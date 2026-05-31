@@ -76,8 +76,10 @@ def test_metrics_exclude_staff_and_compute_conversion() -> None:
     client.post("/events/ingest", json={"events": seed_events()})
 
     metrics = client.get("/stores/ST1008/metrics").json()
+    default_metrics = client.get("/Metrics").json()
 
     assert metrics["unique_visitors"] == 2
+    assert default_metrics["unique_visitors"] == 2
     assert metrics["converted_visitors"] == 1
     assert metrics["conversion_rate"] == 0.5
     assert metrics["abandonment_rate"] == 0.5

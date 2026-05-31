@@ -5,6 +5,7 @@ __pycache__/
 venv/
 env/
 .env
+outputs/submission/
 
 # Large/source challenge assets stay outside the repo.
 *.mp4
@@ -13,4 +14,3 @@ env/
 *.xls
 *.csv
 *.pdf
-
