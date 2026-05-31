@@ -105,7 +105,11 @@ function renderReplay(replay) {
   const total = replay.total_events || 0;
   const ingested = replay.ingested_events || 0;
   const pct = total ? Math.min(100, Math.round((ingested / total) * 100)) : 0;
-  els.replayLabel.textContent = replay.running ? "Replay streaming" : total && ingested === total ? "Replay complete" : "Replay idle";
+  els.replayLabel.textContent = replay.running
+    ? "Sample replay streaming"
+    : total && ingested === total
+      ? "Sample replay complete"
+      : "Sample replay idle";
   els.replayCounts.textContent = `${numberFmt.format(ingested)} / ${numberFmt.format(total)} events`;
   els.replayBar.style.width = `${pct}%`;
   els.startReplay.disabled = replay.running;
@@ -149,7 +153,7 @@ function renderFunnel(payload) {
 function renderHeatmap(payload) {
   const zones = [...(payload.zones || [])].sort((a, b) => b.heat_score - a.heat_score);
   if (!zones.length) {
-    els.heatmap.innerHTML = `<div class="zone-tile" style="background:#eef3f5"><strong>No zones yet</strong><span>Start replay to populate activity.</span></div>`;
+    els.heatmap.innerHTML = `<div class="zone-tile" style="background:#eef3f5"><strong>No zones yet</strong><span>Upload footage or replay the sample to populate activity.</span></div>`;
     return;
   }
   els.heatmap.innerHTML = zones
@@ -227,13 +231,13 @@ function label(value) {
 function staleFeedDetail(health) {
   const stores = Object.values(health.stores || {});
   const stale = stores.find((store) => store.warning === "STALE_FEED");
-  if (!stale || !stale.last_event_timestamp) return "Historical replay feed";
+  if (!stale || !stale.last_event_timestamp) return "Historical sample feed";
   const last = new Date(stale.last_event_timestamp);
   return `Last event ${last.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`;
 }
 
 function uploadDetail(upload) {
-  if (!upload || upload.status === "idle") return "Use replay for the sample dataset, or upload fresh CCTV for a new analysis run.";
+  if (!upload || upload.status === "idle") return "Upload CCTV to run a new analysis. Sample replay is only for quick demo data.";
   if (upload.status === "queued") return "Queued for analysis.";
   if (upload.status === "processing") return "Detector is converting footage into customer journey events.";
   if (upload.status === "completed") {

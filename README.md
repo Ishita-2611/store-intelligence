@@ -118,7 +118,7 @@ The bonus dashboard is served by the same FastAPI app:
 http://127.0.0.1:8000/dashboard
 ```
 
-Use **Start live replay** to stream the generated Part A event file into the API in timed batches. The KPI strip, funnel, heatmap, anomaly panel, and dwell ranking update while the replay runs.
+Use **Replay sample** to stream the prepared Part A event file into the API in timed batches. This is a quick demo path for reviewers when they do not want to wait for full CCTV processing.
 
 Use **Analyze footage** to upload a CCTV `.zip` or `.mp4` from the dashboard. The API runs the Part A detector in the background, ingests the generated events, and refreshes the analytics from that uploaded footage.
 

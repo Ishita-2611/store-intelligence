@@ -15,10 +15,10 @@
             <p class="eyebrow">Brigade Bangalore · ST1008</p>
           </div>
           <h1>Store Intelligence Command Center</h1>
-          <p class="subtitle">Live offline conversion, zone attention, queue pressure, and feed health from the Part A event stream.</p>
+          <p class="subtitle">Upload CCTV footage for analysis, or replay the prepared challenge sample for a quick dashboard demo.</p>
         </div>
         <div class="actions" aria-label="Dashboard controls">
-          <button id="startReplay" class="primary" type="button" title="Replay Part A events into the API">Start live replay</button>
+          <button id="startReplay" type="button" title="Replay the preprocessed sample events">Replay sample</button>
           <button id="resetReplay" type="button" title="Clear replay state and API memory">Reset</button>
         </div>
       </header>
@@ -33,7 +33,7 @@
         </div>
         <div class="replay-meter">
           <div class="meter-copy">
-            <strong id="replayLabel">Replay idle</strong>
+            <strong id="replayLabel">Sample replay idle</strong>
             <span id="replayCounts">0 / 0 events</span>
           </div>
           <div class="meter-track"><span id="replayBar"></span></div>
@@ -60,7 +60,7 @@
         </form>
         <div class="upload-status">
           <strong id="uploadStatus">No upload running</strong>
-          <span id="uploadDetail">Use replay for the sample dataset, or upload fresh CCTV for a new analysis run.</span>
+          <span id="uploadDetail">Upload CCTV to run a new analysis. Sample replay is only for quick demo data.</span>
         </div>
       </section>
 
