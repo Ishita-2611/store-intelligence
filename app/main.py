@@ -102,6 +102,7 @@ def get_demo_replay_status() -> dict:
 @app.post("/uploads/cctv")
 def upload_cctv(file: UploadFile = File(...)) -> dict:
     replay_controller.stop()
+    upload_controller.reset()
     store.reset()
     job = upload_controller.create_job(file)
     return job.__dict__.copy()

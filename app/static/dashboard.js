@@ -34,18 +34,27 @@ const els = {
 els.startReplay.addEventListener("click", async () => {
   els.startReplay.disabled = true;
   els.uploadButton.disabled = true;
-  await postJson("/demo/replay/start?batch_size=22&interval_ms=550");
-  await refresh();
+  try {
+    await postJson("/demo/replay/start?batch_size=22&interval_ms=550");
+    await refresh();
+  } catch (error) {
+    renderUpload({ status: "failed", error: error.message });
+  }
 });
 
 els.resetReplay.addEventListener("click", async () => {
   els.resetReplay.disabled = true;
-  await postJson("/demo/replay/reset");
-  els.cctvFile.value = "";
-  els.fileName.textContent = "Choose CCTV footage";
-  renderUpload({ status: "idle" }, "Dashboard cleared. Upload CCTV to run a new analysis.");
-  els.resetReplay.disabled = false;
-  await refresh();
+  try {
+    await postJson("/demo/replay/reset");
+    els.cctvFile.value = "";
+    els.fileName.textContent = "Choose CCTV footage";
+    renderUpload({ status: "idle" }, "Dashboard cleared. Upload CCTV to run a new analysis.");
+    await refresh();
+  } catch (error) {
+    renderUpload({ status: "failed", error: error.message });
+  } finally {
+    els.resetReplay.disabled = false;
+  }
 });
 
 els.cctvFile.addEventListener("change", () => {
@@ -69,8 +78,6 @@ els.uploadForm.addEventListener("submit", async (event) => {
     renderUpload(job);
   } catch (error) {
     renderUpload({ status: "failed", error: error.message });
-  } finally {
-    els.uploadButton.disabled = false;
   }
 });
 

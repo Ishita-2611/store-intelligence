@@ -1,6 +1,8 @@
 import zipfile
+from io import BytesIO
 
 from fastapi.testclient import TestClient
+from starlette.datastructures import UploadFile
 
 from app.main import app
 from app.uploads import UploadJob, ensure_zip, upload_controller
@@ -10,8 +12,7 @@ client = TestClient(app)
 
 
 def setup_function() -> None:
-    with upload_controller._lock:
-        upload_controller._jobs.clear()
+    upload_controller.reset()
 
 
 def test_latest_upload_is_idle_before_any_cctv_job() -> None:
@@ -57,3 +58,14 @@ def test_upload_rejects_unsupported_file_type(tmp_path) -> None:
         assert ".mp4" in str(exc)
     else:
         raise AssertionError("Expected unsupported upload type to fail")
+
+
+def test_reset_cancels_queued_upload_before_processing() -> None:
+    upload = UploadFile(filename="queued.mp4", file=BytesIO(b"fake-video"))
+
+    job = upload_controller.create_job(upload)
+    generation = upload_controller._generation
+    upload_controller.reset()
+
+    assert upload_controller._is_cancelled(job.job_id, generation) is True
+    assert upload_controller.latest() is None

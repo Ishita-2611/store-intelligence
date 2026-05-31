@@ -39,6 +39,7 @@ class UploadController:
         self._jobs: dict[str, UploadJob] = {}
         self._lock = threading.Lock()
         self._active_process: subprocess.Popen[str] | None = None
+        self._generation = 0
 
     def create_job(self, upload: UploadFile) -> UploadJob:
         job_id = uuid.uuid4().hex[:12]
@@ -51,13 +52,15 @@ class UploadController:
         job = UploadJob(job_id=job_id, filename=filename)
         with self._lock:
             self._jobs[job_id] = job
+            generation = self._generation
 
-        thread = threading.Thread(target=self._process, args=(job_id, source_path), daemon=True)
+        thread = threading.Thread(target=self._process, args=(job_id, source_path, generation), daemon=True)
         thread.start()
         return job
 
     def reset(self) -> dict[str, Any]:
         with self._lock:
+            self._generation += 1
             process = self._active_process
             for job in self._jobs.values():
                 if job.status in {"queued", "processing"}:
@@ -83,11 +86,15 @@ class UploadController:
             job = next(reversed(self._jobs.values()))
             return job.__dict__.copy()
 
-    def _process(self, job_id: str, source_path: Path) -> None:
+    def _process(self, job_id: str, source_path: Path, generation: int) -> None:
+        if self._is_cancelled(job_id, generation):
+            return
         self._update(job_id, status="processing", started_at=_now())
         events_path = UPLOAD_DIR / f"{job_id}-events.jsonl"
         try:
             zip_path = ensure_zip(source_path)
+            if self._is_cancelled(job_id, generation):
+                return
             command = [
                 sys.executable,
                 "-m",
@@ -102,6 +109,8 @@ class UploadController:
                 "10",
             ]
             completed = run_detector(command, self)
+            if self._is_cancelled(job_id, generation):
+                return
 
             accepted, rejected = ingest_jsonl(events_path)
             self._update(
@@ -122,6 +131,10 @@ class UploadController:
                 return
             for key, value in changes.items():
                 setattr(job, key, value)
+
+    def _is_cancelled(self, job_id: str, generation: int) -> bool:
+        with self._lock:
+            return generation != self._generation or job_id not in self._jobs
 
 
 def ensure_zip(path: Path) -> Path:
