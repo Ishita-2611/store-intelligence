@@ -33,12 +33,18 @@ const els = {
 
 els.startReplay.addEventListener("click", async () => {
   els.startReplay.disabled = true;
+  els.uploadButton.disabled = true;
   await postJson("/demo/replay/start?batch_size=22&interval_ms=550");
   await refresh();
 });
 
 els.resetReplay.addEventListener("click", async () => {
+  els.resetReplay.disabled = true;
   await postJson("/demo/replay/reset");
+  els.cctvFile.value = "";
+  els.fileName.textContent = "Choose CCTV footage";
+  renderUpload({ status: "idle" }, "Dashboard cleared. Upload CCTV to run a new analysis.");
+  els.resetReplay.disabled = false;
   await refresh();
 });
 
@@ -82,6 +88,7 @@ async function refresh() {
   renderHealth(health);
   renderReplay(replay);
   renderUpload(upload);
+  syncControls(replay, upload);
   renderMetrics(metrics, heatmap);
   renderFunnel(funnel);
   renderHeatmap(heatmap);
@@ -112,7 +119,6 @@ function renderReplay(replay) {
       : "Sample replay idle";
   els.replayCounts.textContent = `${numberFmt.format(ingested)} / ${numberFmt.format(total)} events`;
   els.replayBar.style.width = `${pct}%`;
-  els.startReplay.disabled = replay.running;
 }
 
 function renderUpload(upload, overrideDetail) {
@@ -120,7 +126,12 @@ function renderUpload(upload, overrideDetail) {
   const filename = upload.filename ? ` for ${upload.filename}` : "";
   els.uploadStatus.textContent = label(status === "idle" ? "No upload running" : `${status}${filename}`);
   els.uploadDetail.textContent = overrideDetail || uploadDetail(upload);
-  els.uploadButton.disabled = status === "queued" || status === "processing";
+}
+
+function syncControls(replay, upload) {
+  const uploadRunning = upload.status === "queued" || upload.status === "processing";
+  els.startReplay.disabled = replay.running || uploadRunning;
+  els.uploadButton.disabled = replay.running || uploadRunning;
 }
 
 function renderMetrics(metrics, heatmap) {

@@ -9,12 +9,15 @@ from fastapi.testclient import TestClient
 from app import replay
 from app.ingestion import store
 from app.main import app
+from app.uploads import UploadJob, upload_controller
 
 
 client = TestClient(app)
 
 
 def setup_function() -> None:
+    replay.replay_controller.stop()
+    upload_controller.reset()
     store.reset()
 
 
@@ -187,3 +190,39 @@ def test_demo_replay_streams_events_from_jsonl(monkeypatch, tmp_path) -> None:
 
     assert status["ingested_events"] == 2
     assert metrics["unique_visitors"] == 1
+
+
+def test_reset_stops_running_sample_replay(monkeypatch, tmp_path) -> None:
+    demo_path = tmp_path / "events.jsonl"
+    demo_events = [
+        event("reset-1", "VIS_RESET", "ENTRY", "2026-04-10T13:00:00Z"),
+        event("reset-2", "VIS_RESET", "ZONE_ENTER", "2026-04-10T13:01:00Z", "SKINCARE"),
+    ]
+    demo_path.write_text("\n".join(json.dumps(item) for item in demo_events), encoding="utf-8")
+    monkeypatch.setattr(replay, "DEMO_EVENTS_PATH", demo_path)
+
+    client.post("/demo/replay/start?batch_size=1&interval_ms=5000")
+    response = client.post("/demo/replay/reset")
+
+    assert response.status_code == 200
+    assert response.json()["running"] is False
+    assert client.get("/stores/ST1008/metrics").json()["event_count"] == 0
+
+
+def test_upload_start_stops_sample_replay(monkeypatch, tmp_path) -> None:
+    demo_path = tmp_path / "events.jsonl"
+    demo_path.write_text(json.dumps(event("upload-stop-1", "VIS_DEMO", "ENTRY", "2026-04-10T13:00:00Z")), encoding="utf-8")
+    monkeypatch.setattr(replay, "DEMO_EVENTS_PATH", demo_path)
+
+    def fake_create_job(upload) -> UploadJob:
+        return UploadJob(job_id="upload123", filename=upload.filename, status="queued")
+
+    client.post("/demo/replay/start?batch_size=1&interval_ms=5000")
+    assert client.get("/stores/ST1008/metrics").json()["event_count"] == 1
+    monkeypatch.setattr(upload_controller, "create_job", fake_create_job)
+    response = client.post("/uploads/cctv", files={"file": ("new-footage.mp4", b"video", "video/mp4")})
+
+    assert response.status_code == 200
+    assert response.json()["filename"] == "new-footage.mp4"
+    assert client.get("/demo/replay/status").json()["running"] is False
+    assert client.get("/stores/ST1008/metrics").json()["event_count"] == 0

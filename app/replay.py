@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import threading
-import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,17 +30,25 @@ class ReplayController:
         self._state = ReplayState()
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
+        self._stop_event = threading.Event()
 
     def status(self) -> dict[str, Any]:
         with self._lock:
             return self._state.__dict__.copy()
 
     def reset(self) -> dict[str, Any]:
+        self.stop()
         with self._lock:
-            if self._state.running:
-                return self._state.__dict__.copy()
             store.reset()
             self._state = ReplayState()
+            return self._state.__dict__.copy()
+
+    def stop(self) -> dict[str, Any]:
+        self._stop_event.set()
+        with self._lock:
+            if self._state.running:
+                self._state.running = False
+                self._state.completed_at = _now()
             return self._state.__dict__.copy()
 
     def start(self, batch_size: int = 25, interval_ms: int = 700) -> dict[str, Any]:
@@ -50,6 +57,7 @@ class ReplayController:
                 return self._state.__dict__.copy()
             events = load_demo_events()
             store.reset()
+            self._stop_event.clear()
             self._state = ReplayState(
                 running=True,
                 total_events=len(events),
@@ -63,7 +71,7 @@ class ReplayController:
 
     def _run(self, events: list[dict[str, Any]]) -> None:
         index = 0
-        while index < len(events):
+        while index < len(events) and not self._stop_event.is_set():
             with self._lock:
                 batch_size = self._state.batch_size
                 interval_s = self._state.interval_ms / 1000
@@ -81,7 +89,7 @@ class ReplayController:
             index += batch_size
             with self._lock:
                 self._state.ingested_events += accepted
-            time.sleep(interval_s)
+            self._stop_event.wait(interval_s)
 
         with self._lock:
             self._state.running = False
@@ -99,4 +107,3 @@ def _now() -> str:
 
 
 replay_controller = ReplayController()
-

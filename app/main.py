@@ -84,11 +84,13 @@ def get_health() -> dict:
 
 @app.post("/demo/replay/start")
 def start_demo_replay(batch_size: int = 25, interval_ms: int = 700) -> dict:
+    upload_controller.reset()
     return replay_controller.start(batch_size=batch_size, interval_ms=interval_ms)
 
 
 @app.post("/demo/replay/reset")
 def reset_demo_replay() -> dict:
+    upload_controller.reset()
     return replay_controller.reset()
 
 
@@ -99,6 +101,8 @@ def get_demo_replay_status() -> dict:
 
 @app.post("/uploads/cctv")
 def upload_cctv(file: UploadFile = File(...)) -> dict:
+    replay_controller.stop()
+    store.reset()
     job = upload_controller.create_job(file)
     return job.__dict__.copy()
 

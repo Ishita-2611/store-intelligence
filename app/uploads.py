@@ -38,6 +38,7 @@ class UploadController:
     def __init__(self) -> None:
         self._jobs: dict[str, UploadJob] = {}
         self._lock = threading.Lock()
+        self._active_process: subprocess.Popen[str] | None = None
 
     def create_job(self, upload: UploadFile) -> UploadJob:
         job_id = uuid.uuid4().hex[:12]
@@ -54,6 +55,21 @@ class UploadController:
         thread = threading.Thread(target=self._process, args=(job_id, source_path), daemon=True)
         thread.start()
         return job
+
+    def reset(self) -> dict[str, Any]:
+        with self._lock:
+            process = self._active_process
+            for job in self._jobs.values():
+                if job.status in {"queued", "processing"}:
+                    job.status = "cancelled"
+                    job.completed_at = _now()
+                    job.error = "Analysis was reset by the user."
+            self._jobs.clear()
+            self._active_process = None
+
+        if process and process.poll() is None:
+            terminate_process(process)
+        return {"status": "idle"}
 
     def status(self, job_id: str) -> dict[str, Any] | None:
         with self._lock:
@@ -85,9 +101,7 @@ class UploadController:
                 "--sample-stride",
                 "10",
             ]
-            completed = subprocess.run(command, capture_output=True, text=True, timeout=900)
-            if completed.returncode != 0:
-                raise RuntimeError((completed.stderr or completed.stdout or "detection pipeline failed").strip())
+            completed = run_detector(command, self)
 
             accepted, rejected = ingest_jsonl(events_path)
             self._update(
@@ -103,7 +117,9 @@ class UploadController:
 
     def _update(self, job_id: str, **changes: Any) -> None:
         with self._lock:
-            job = self._jobs[job_id]
+            job = self._jobs.get(job_id)
+            if job is None:
+                return
             for key, value in changes.items():
                 setattr(job, key, value)
 
@@ -138,3 +154,27 @@ def _now() -> str:
 
 upload_controller = UploadController()
 
+
+def run_detector(command: list[str], controller: UploadController) -> subprocess.CompletedProcess[str]:
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    with controller._lock:
+        controller._active_process = process
+    try:
+        stdout, stderr = process.communicate(timeout=900)
+    finally:
+        with controller._lock:
+            if controller._active_process is process:
+                controller._active_process = None
+
+    completed = subprocess.CompletedProcess(command, process.returncode, stdout=stdout, stderr=stderr)
+    if completed.returncode != 0:
+        raise RuntimeError((completed.stderr or completed.stdout or "detection pipeline failed").strip())
+    return completed
+
+
+def terminate_process(process: subprocess.Popen[str]) -> None:
+    try:
+        process.terminate()
+        process.wait(timeout=5)
+    except Exception:
+        process.kill()
