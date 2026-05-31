@@ -63,6 +63,14 @@ Run with Docker Compose:
 docker compose up --build
 ```
 
+Deploy on Render:
+
+1. Open Render and create a new Blueprint from this GitHub repository.
+2. Select `render.yaml`.
+3. After the service is live, use `https://<your-render-service>.onrender.com/dashboard` as the demo link.
+
+The Docker container reads Render's `PORT` environment variable and exposes `/health` for deployment health checks.
+
 Five-command local setup:
 
 ```powershell
