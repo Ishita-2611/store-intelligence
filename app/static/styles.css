@@ -11,6 +11,9 @@
   --green-2: #0f8b63;
   --blue: #255fca;
   --cyan: #087f9e;
+  --purplle: #6f2dbd;
+  --purplle-deep: #4d148c;
+  --purplle-soft: #f2ebfb;
   --amber: #b7791f;
   --red: #b42318;
   --shadow: 0 16px 40px rgba(25, 38, 48, 0.08);
@@ -23,7 +26,7 @@
 body {
   margin: 0;
   background:
-    linear-gradient(180deg, #e8eff1 0, #f3f6f7 340px),
+    linear-gradient(180deg, #efe8f7 0, #edf3f3 260px, #f3f6f7 420px),
     var(--bg);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -43,8 +46,8 @@ button {
 }
 
 button.primary {
-  border-color: #07523e;
-  background: #07523e;
+  border-color: var(--purplle-deep);
+  background: var(--purplle-deep);
   color: #fff;
 }
 
@@ -79,6 +82,28 @@ button:disabled {
 .title-block {
   display: grid;
   gap: 6px;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.brand-mark {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(111, 45, 189, 0.22);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff, var(--purplle-soft));
+  color: var(--purplle-deep);
+  padding: 0 10px;
+  font-size: 18px;
+  font-weight: 850;
+  letter-spacing: 0;
+  box-shadow: 0 10px 24px rgba(111, 45, 189, 0.12);
 }
 
 .eyebrow {
@@ -216,7 +241,7 @@ h2 {
   width: 0%;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--green), var(--cyan), var(--blue));
+  background: linear-gradient(90deg, var(--purplle), var(--blue), var(--cyan));
   transition: width 320ms ease;
 }
 
@@ -248,11 +273,11 @@ h2 {
   position: absolute;
   inset: 0 auto 0 0;
   width: 4px;
-  background: var(--green);
+  background: var(--purplle);
 }
 
 .kpi-grid article:nth-child(2)::before {
-  background: var(--blue);
+  background: var(--green);
 }
 
 .kpi-grid article:nth-child(3)::before {
@@ -355,7 +380,7 @@ h2 {
   display: block;
   height: 100%;
   min-width: 2px;
-  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  background: linear-gradient(90deg, var(--purplle), var(--blue), var(--cyan));
   border-radius: inherit;
 }
 
