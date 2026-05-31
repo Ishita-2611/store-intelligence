@@ -6,6 +6,7 @@ const els = {
   resetReplay: document.querySelector("#resetReplay"),
   healthDot: document.querySelector("#healthDot"),
   healthText: document.querySelector("#healthText"),
+  healthDetail: document.querySelector("#healthDetail"),
   replayLabel: document.querySelector("#replayLabel"),
   replayCounts: document.querySelector("#replayCounts"),
   replayBar: document.querySelector("#replayBar"),
@@ -58,10 +59,12 @@ function renderHealth(health) {
   if (health.status === "ok") {
     els.healthDot.className = "dot ok";
     els.healthText.textContent = "API healthy";
+    els.healthDetail.textContent = "All feeds within freshness window";
     return;
   }
   els.healthDot.className = "dot warn";
   els.healthText.textContent = "Feed stale, API online";
+  els.healthDetail.textContent = staleFeedDetail(health);
 }
 
 function renderReplay(replay) {
@@ -167,6 +170,14 @@ function label(value) {
     .replaceAll("_", " ")
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function staleFeedDetail(health) {
+  const stores = Object.values(health.stores || {});
+  const stale = stores.find((store) => store.warning === "STALE_FEED");
+  if (!stale || !stale.last_event_timestamp) return "Historical replay feed";
+  const last = new Date(stale.last_event_timestamp);
+  return `Last event ${last.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`;
 }
 
 refresh();

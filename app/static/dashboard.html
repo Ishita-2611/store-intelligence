@@ -9,9 +9,10 @@
   <body>
     <main class="shell">
       <header class="topbar">
-        <div>
+        <div class="title-block">
           <p class="eyebrow">Brigade Bangalore · ST1008</p>
           <h1>Store Intelligence Command Center</h1>
+          <p class="subtitle">Live offline conversion, zone attention, queue pressure, and feed health from the Part A event stream.</p>
         </div>
         <div class="actions" aria-label="Dashboard controls">
           <button id="startReplay" class="primary" type="button" title="Replay Part A events into the API">Start live replay</button>
@@ -19,38 +20,45 @@
         </div>
       </header>
 
-      <section class="status-strip" aria-label="Live service status">
+      <section class="control-band" aria-label="Live service status">
         <div class="status-pill">
           <span class="dot" id="healthDot"></span>
-          <span id="healthText">Checking API</span>
+          <div>
+            <strong id="healthText">Checking API</strong>
+            <span id="healthDetail">Awaiting first poll</span>
+          </div>
         </div>
         <div class="replay-meter">
-          <div>
+          <div class="meter-copy">
             <strong id="replayLabel">Replay idle</strong>
             <span id="replayCounts">0 / 0 events</span>
           </div>
           <div class="meter-track"><span id="replayBar"></span></div>
         </div>
+        <div class="last-poll">
+          <span>Last refresh</span>
+          <strong id="lastUpdated">Waiting</strong>
+        </div>
       </section>
 
       <section class="kpi-grid" aria-label="Key metrics">
         <article>
-          <span>Visitors</span>
+          <span class="metric-label">Visitors</span>
           <strong id="uniqueVisitors">0</strong>
           <small id="eventCount">0 customer events</small>
         </article>
         <article>
-          <span>Conversion</span>
+          <span class="metric-label">Conversion</span>
           <strong id="conversionRate">0.0%</strong>
           <small id="convertedVisitors">0 converted sessions</small>
         </article>
         <article>
-          <span>Queue depth</span>
+          <span class="metric-label">Queue depth</span>
           <strong id="queueDepth">0</strong>
           <small id="abandonmentRate">0.0% abandonment</small>
         </article>
         <article>
-          <span>Data confidence</span>
+          <span class="metric-label">Data confidence</span>
           <strong id="dataConfidence">LOW</strong>
           <small id="zoneCount">0 zones observed</small>
         </article>
@@ -63,7 +71,7 @@
               <p class="eyebrow">Session movement</p>
               <h2>Conversion funnel</h2>
             </div>
-            <span id="lastUpdated">Waiting for events</span>
+            <span>Session based</span>
           </div>
           <div id="funnel" class="funnel"></div>
         </section>
@@ -102,4 +110,3 @@
     <script src="/static/dashboard.js"></script>
   </body>
 </html>
-
