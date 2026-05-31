@@ -1,3 +1,5 @@
+import threading
+import time
 import zipfile
 from io import BytesIO
 
@@ -69,3 +71,28 @@ def test_reset_cancels_queued_upload_before_processing() -> None:
 
     assert upload_controller._is_cancelled(job.job_id, generation) is True
     assert upload_controller.latest() is None
+
+
+def test_reset_returns_immediately_while_detector_is_stopping(monkeypatch) -> None:
+    stopped = threading.Event()
+
+    class SlowProcess:
+        def poll(self) -> None:
+            return None
+
+    def slow_terminate(_process) -> None:
+        time.sleep(0.2)
+        stopped.set()
+
+    monkeypatch.setattr("app.uploads.terminate_process", slow_terminate)
+    with upload_controller._lock:
+        upload_controller._jobs["job-slow"] = UploadJob(job_id="job-slow", filename="slow.mp4", status="processing")
+        upload_controller._active_process = SlowProcess()
+
+    started = time.perf_counter()
+    response = upload_controller.reset()
+
+    assert response == {"status": "idle"}
+    assert time.perf_counter() - started < 0.1
+    assert upload_controller.latest() is None
+    assert stopped.wait(timeout=1)

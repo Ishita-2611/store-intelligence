@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import signal
 import shutil
 import subprocess
 import sys
@@ -71,7 +73,7 @@ class UploadController:
             self._active_process = None
 
         if process and process.poll() is None:
-            terminate_process(process)
+            threading.Thread(target=terminate_process, args=(process,), daemon=True).start()
         return {"status": "idle"}
 
     def status(self, job_id: str) -> dict[str, Any] | None:
@@ -169,7 +171,7 @@ upload_controller = UploadController()
 
 
 def run_detector(command: list[str], controller: UploadController) -> subprocess.CompletedProcess[str]:
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, **process_group_kwargs())
     with controller._lock:
         controller._active_process = process
     try:
@@ -187,7 +189,30 @@ def run_detector(command: list[str], controller: UploadController) -> subprocess
 
 def terminate_process(process: subprocess.Popen[str]) -> None:
     try:
-        process.terminate()
+        terminate_process_group(process)
         process.wait(timeout=5)
+    except Exception:
+        kill_process_group(process)
+
+
+def process_group_kwargs() -> dict[str, Any]:
+    if sys.platform == "win32":
+        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    return {"start_new_session": True}
+
+
+def terminate_process_group(process: subprocess.Popen[str]) -> None:
+    if sys.platform == "win32":
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)], capture_output=True, text=True)
+        return
+    os.killpg(process.pid, signal.SIGTERM)
+
+
+def kill_process_group(process: subprocess.Popen[str]) -> None:
+    try:
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)], capture_output=True, text=True)
+            return
+        os.killpg(process.pid, signal.SIGKILL)
     except Exception:
         process.kill()
