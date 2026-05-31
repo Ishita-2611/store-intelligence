@@ -99,3 +99,19 @@ Documentation for the AI-assisted engineering decisions is in:
 - `docs/CHOICES.md`
 
 Each test file also starts with a `# PROMPT:` and `# CHANGES MADE:` block explaining what AI was asked to draft and what was changed afterward.
+
+## Part E: Live Dashboard
+
+The bonus dashboard is served by the same FastAPI app:
+
+```text
+http://127.0.0.1:8000/dashboard
+```
+
+Use **Start live replay** to stream the generated Part A event file into the API in timed batches. The KPI strip, funnel, heatmap, anomaly panel, and dwell ranking update while the replay runs.
+
+Dashboard support endpoints:
+
+- `POST /demo/replay/start`
+- `POST /demo/replay/reset`
+- `GET /demo/replay/status`

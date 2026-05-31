@@ -1,8 +1,12 @@
 # PROMPT: Generate FastAPI tests for a Store Intelligence API that ingests event batches idempotently and computes metrics, funnel, heatmap, anomalies, and health from session events.
 # CHANGES MADE: Replaced generic fixtures with edge-case events that cover staff exclusion, duplicate ingest, billing abandonment, and low-confidence-but-valid events.
 
+import json
+import time
+
 from fastapi.testclient import TestClient
 
+from app import replay
 from app.ingestion import store
 from app.main import app
 
@@ -145,3 +149,39 @@ def test_request_logging_includes_trace_and_event_count(caplog) -> None:
     assert response.headers["x-trace-id"] == "trace-test"
     assert '"trace_id":"trace-test"' in caplog.text
     assert '"event_count":1' in caplog.text
+
+
+def test_dashboard_and_replay_status_are_available() -> None:
+    dashboard = client.get("/dashboard")
+    status = client.get("/demo/replay/status")
+
+    assert dashboard.status_code == 200
+    assert "Store Intelligence Command Center" in dashboard.text
+    assert status.status_code == 200
+    assert status.json()["running"] is False
+
+
+def test_demo_replay_streams_events_from_jsonl(monkeypatch, tmp_path) -> None:
+    demo_path = tmp_path / "events.jsonl"
+    demo_events = [
+        event("demo-1", "VIS_DEMO", "ENTRY", "2026-04-10T13:00:00Z"),
+        event("demo-2", "VIS_DEMO", "ZONE_ENTER", "2026-04-10T13:01:00Z", "SKINCARE"),
+    ]
+    demo_path.write_text("\n".join(json.dumps(item) for item in demo_events), encoding="utf-8")
+    monkeypatch.setattr(replay, "DEMO_EVENTS_PATH", demo_path)
+
+    client.post("/demo/replay/reset")
+    response = client.post("/demo/replay/start?batch_size=1&interval_ms=100")
+
+    assert response.status_code == 200
+    for _ in range(20):
+        status = client.get("/demo/replay/status").json()
+        if not status["running"]:
+            break
+        time.sleep(0.05)
+
+    status = client.get("/demo/replay/status").json()
+    metrics = client.get("/stores/ST1008/metrics").json()
+
+    assert status["ingested_events"] == 2
+    assert metrics["unique_visitors"] == 1

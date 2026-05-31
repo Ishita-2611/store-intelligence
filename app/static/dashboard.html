@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Store Intelligence Live Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Brigade Bangalore · ST1008</p>
+          <h1>Store Intelligence Command Center</h1>
+        </div>
+        <div class="actions" aria-label="Dashboard controls">
+          <button id="startReplay" class="primary" type="button" title="Replay Part A events into the API">Start live replay</button>
+          <button id="resetReplay" type="button" title="Clear replay state and API memory">Reset</button>
+        </div>
+      </header>
+
+      <section class="status-strip" aria-label="Live service status">
+        <div class="status-pill">
+          <span class="dot" id="healthDot"></span>
+          <span id="healthText">Checking API</span>
+        </div>
+        <div class="replay-meter">
+          <div>
+            <strong id="replayLabel">Replay idle</strong>
+            <span id="replayCounts">0 / 0 events</span>
+          </div>
+          <div class="meter-track"><span id="replayBar"></span></div>
+        </div>
+      </section>
+
+      <section class="kpi-grid" aria-label="Key metrics">
+        <article>
+          <span>Visitors</span>
+          <strong id="uniqueVisitors">0</strong>
+          <small id="eventCount">0 customer events</small>
+        </article>
+        <article>
+          <span>Conversion</span>
+          <strong id="conversionRate">0.0%</strong>
+          <small id="convertedVisitors">0 converted sessions</small>
+        </article>
+        <article>
+          <span>Queue depth</span>
+          <strong id="queueDepth">0</strong>
+          <small id="abandonmentRate">0.0% abandonment</small>
+        </article>
+        <article>
+          <span>Data confidence</span>
+          <strong id="dataConfidence">LOW</strong>
+          <small id="zoneCount">0 zones observed</small>
+        </article>
+      </section>
+
+      <section class="main-grid">
+        <section class="panel span-7">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Session movement</p>
+              <h2>Conversion funnel</h2>
+            </div>
+            <span id="lastUpdated">Waiting for events</span>
+          </div>
+          <div id="funnel" class="funnel"></div>
+        </section>
+
+        <section class="panel span-5">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Operational signals</p>
+              <h2>Anomalies</h2>
+            </div>
+          </div>
+          <div id="anomalies" class="anomaly-list"></div>
+        </section>
+
+        <section class="panel span-8">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Zone activity</p>
+              <h2>Heatmap readiness</h2>
+            </div>
+          </div>
+          <div id="heatmap" class="heatmap"></div>
+        </section>
+
+        <section class="panel span-4">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Dwell leaders</p>
+              <h2>Attention by zone</h2>
+            </div>
+          </div>
+          <div id="dwellList" class="dwell-list"></div>
+        </section>
+      </section>
+    </main>
+    <script src="/static/dashboard.js"></script>
+  </body>
+</html>
+

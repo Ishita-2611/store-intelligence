@@ -43,3 +43,8 @@ The service can be started with `docker compose up --build`. `/health` returns l
 
 The test suite covers schema validation, idempotent ingest, partial-success handling, all-staff traffic, zero-purchase scenarios, re-entry deduplication, health, logging, graceful degradation, and deterministic pipeline helpers. The video processing loop remains validated by smoke runs rather than statement-level unit coverage, because deterministic correctness is better tested at the event and API boundaries.
 
+## Live Dashboard
+
+Part E adds a first-screen operational dashboard at `/dashboard`. It is served by the same FastAPI process, so Docker Compose starts the API and dashboard together. The dashboard uses `POST /demo/replay/start` to replay `outputs/events_part_a.jsonl` into the in-memory event store in timed batches. While replay is running, the browser polls the same production endpoints used by external clients: `/metrics`, `/funnel`, `/heatmap`, `/anomalies`, `/health`, and `/demo/replay/status`.
+
+This makes the dashboard a connected system demo rather than a static mock. The KPI strip shows visitors, conversion, queue depth, and data confidence. The funnel visualizes session drop-off. The heatmap ranks zone activity by visit count and dwell. The anomaly rail shows active operational signals or an all-clear state. The replay meter shows how many Part A events have flowed through the API so far.

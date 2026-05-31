@@ -32,7 +32,14 @@ The API computes metrics at request time rather than maintaining cached aggregat
 
 The Docker choice changed during implementation. The first image installed the full local requirements, including OpenCV and test tools. That worked conceptually but was too heavy for the local Docker Desktop environment and even caused a failed build. I split runtime dependencies into `requirements-api.txt`, leaving `requirements.txt` for local detection and testing. The final Dockerized API starts cleanly with Compose and exposes `/health`, `/metrics`, `/funnel`, `/heatmap`, and `/anomalies`.
 
-## 4. AI Usage Summary
+## 4. Dashboard Choice
+
+For the bonus dashboard, I considered a separate React/Vite frontend, a terminal dashboard, and a static FastAPI-served web dashboard. I chose a static dashboard served by FastAPI. A separate frontend would look familiar, but it would add another build system and container target. A terminal dashboard would satisfy the minimum requirement, but it would not communicate business value as clearly to reviewers. The final dashboard is a lightweight web UI with no extra service: Docker Compose starts one API container and `/dashboard` is immediately available.
+
+The dashboard uses polling rather than WebSockets or Server-Sent Events. A streaming transport would be elegant, but polling every 1.5 seconds is enough for the event volumes here and keeps failure modes simpler. The important part is that the dashboard reads from the actual API endpoints while a replay worker ingests the Part A event stream in batches. This proves that metrics are updating as events flow, not just painted from static JSON.
+
+An LLM suggested using a marketing-style hero page to make the dashboard look impressive. I rejected that because this is an operational retail intelligence tool. The chosen interface is denser and work-focused: KPI strip, funnel, heatmap, anomaly rail, dwell leaders, health, and replay progress all visible on the first screen.
+
+## 5. AI Usage Summary
 
 AI helped structure the implementation order, identify likely scoring risks, and generate the first draft of tests. I did not accept AI output blindly. I changed the detector plan for reproducibility, corrected funnel logic after seeing real event distributions, and slimmed the Docker build after observing actual local failure. The submitted code is therefore not just generated boilerplate; it includes decisions made from the uploaded files, the real Docker run, and the metrics produced by the current event stream.
-

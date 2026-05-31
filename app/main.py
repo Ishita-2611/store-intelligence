@@ -3,18 +3,21 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from .errors import StoreUnavailableError
 from .ingestion import store
 from .logging import configure_logging, structured_request_logger
 from .metrics import compute_anomalies, compute_funnel, compute_heatmap, compute_metrics, health_snapshot
 from .models import IngestRequest, IngestResponse
+from .replay import replay_controller
 
 
 app = FastAPI(title="Store Intelligence API", version="0.2.0")
 configure_logging()
 app.middleware("http")(structured_request_logger)
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 @app.exception_handler(StoreUnavailableError)
@@ -23,6 +26,16 @@ async def store_unavailable_handler(_request: Request, exc: StoreUnavailableErro
         status_code=503,
         content={"error": {"code": "STORE_UNAVAILABLE", "message": str(exc)}},
     )
+
+
+@app.get("/")
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/dashboard")
+
+
+@app.get("/dashboard")
+def dashboard() -> FileResponse:
+    return FileResponse("app/static/dashboard.html")
 
 
 @app.post("/events/ingest", response_model=IngestResponse)
@@ -60,3 +73,18 @@ def get_anomalies(store_id: str) -> dict:
 @app.get("/health")
 def get_health() -> dict:
     return health_snapshot(store.all_events())
+
+
+@app.post("/demo/replay/start")
+def start_demo_replay(batch_size: int = 25, interval_ms: int = 700) -> dict:
+    return replay_controller.start(batch_size=batch_size, interval_ms=interval_ms)
+
+
+@app.post("/demo/replay/reset")
+def reset_demo_replay() -> dict:
+    return replay_controller.reset()
+
+
+@app.get("/demo/replay/status")
+def get_demo_replay_status() -> dict:
+    return replay_controller.status()
