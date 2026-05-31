@@ -90,3 +90,12 @@ $events = Get-Content outputs\events_part_a.jsonl | ForEach-Object { $_ | Conver
 Invoke-RestMethod -Uri http://127.0.0.1:8000/events/ingest -Method Post -ContentType application/json -Body (@{events=@($events | Select-Object -First 500)} | ConvertTo-Json -Depth 20)
 Invoke-RestMethod -Uri http://127.0.0.1:8000/events/ingest -Method Post -ContentType application/json -Body (@{events=@($events | Select-Object -Skip 500)} | ConvertTo-Json -Depth 20)
 ```
+
+## Part D: AI Engineering
+
+Documentation for the AI-assisted engineering decisions is in:
+
+- `docs/DESIGN.md`
+- `docs/CHOICES.md`
+
+Each test file also starts with a `# PROMPT:` and `# CHANGES MADE:` block explaining what AI was asked to draft and what was changed afterward.
