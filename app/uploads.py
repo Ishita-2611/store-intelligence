@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import json
 import os
-import signal
 import shutil
-import subprocess
-import sys
 import threading
+import tempfile
 import uuid
 import zipfile
 from dataclasses import dataclass
@@ -43,7 +41,6 @@ class UploadController:
     def __init__(self) -> None:
         self._jobs: dict[str, UploadJob] = {}
         self._lock = threading.Lock()
-        self._active_process: subprocess.Popen[str] | None = None
         self._generation = 0
 
     def create_job(self, upload: UploadFile) -> UploadJob:
@@ -66,17 +63,12 @@ class UploadController:
     def reset(self) -> dict[str, Any]:
         with self._lock:
             self._generation += 1
-            process = self._active_process
             for job in self._jobs.values():
                 if job.status in {"queued", "processing"}:
                     job.status = "cancelled"
                     job.completed_at = _now()
                     job.error = "Analysis was reset by the user."
             self._jobs.clear()
-            self._active_process = None
-
-        if process and process.poll() is None:
-            threading.Thread(target=terminate_process, args=(process,), daemon=True).start()
         return {"status": "idle"}
 
     def status(self, job_id: str) -> dict[str, Any] | None:
@@ -100,22 +92,7 @@ class UploadController:
             zip_path = ensure_zip(source_path)
             if self._is_cancelled(job_id, generation):
                 return
-            command = [
-                sys.executable,
-                "-m",
-                "pipeline.detect",
-                "--video-zip",
-                str(zip_path),
-                "--layout",
-                str(LAYOUT_PATH),
-                "--out",
-                str(events_path),
-                "--sample-stride",
-                str(UPLOAD_SAMPLE_STRIDE),
-                "--max-seconds",
-                str(UPLOAD_MAX_SECONDS),
-            ]
-            completed = run_detector(command, self)
+            run_detector(zip_path, events_path, self, job_id, generation)
             if self._is_cancelled(job_id, generation):
                 return
 
@@ -175,49 +152,39 @@ def _now() -> str:
 upload_controller = UploadController()
 
 
-def run_detector(command: list[str], controller: UploadController) -> subprocess.CompletedProcess[str]:
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, **process_group_kwargs())
-    with controller._lock:
-        controller._active_process = process
-    try:
-        stdout, stderr = process.communicate(timeout=900)
-    finally:
-        with controller._lock:
-            if controller._active_process is process:
-                controller._active_process = None
+def run_detector(zip_path: Path, events_path: Path, controller: UploadController, job_id: str, generation: int) -> None:
+    from pipeline.detect import process_video
+    from pipeline.emit import JsonlEventWriter
 
-    completed = subprocess.CompletedProcess(command, process.returncode, stdout=stdout, stderr=stderr)
-    if completed.returncode != 0:
-        raise RuntimeError((completed.stderr or completed.stdout or "detection pipeline failed").strip())
-    return completed
-
-
-def terminate_process(process: subprocess.Popen[str]) -> None:
-    try:
-        terminate_process_group(process)
-        process.wait(timeout=5)
-    except Exception:
-        kill_process_group(process)
-
-
-def process_group_kwargs() -> dict[str, Any]:
-    if sys.platform == "win32":
-        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
-    return {"start_new_session": True}
-
-
-def terminate_process_group(process: subprocess.Popen[str]) -> None:
-    if sys.platform == "win32":
-        subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)], capture_output=True, text=True)
-        return
-    os.killpg(process.pid, signal.SIGTERM)
+    layout = json.loads(LAYOUT_PATH.read_text(encoding="utf-8"))
+    store_id = layout["store_id"]
+    with tempfile.TemporaryDirectory() as tmpdir, JsonlEventWriter(events_path) as writer:
+        tmpdir_path = Path(tmpdir)
+        with zipfile.ZipFile(zip_path) as archive:
+            members = [member for member in archive.namelist() if member.lower().endswith(".mp4")]
+            if not members:
+                raise ValueError("No MP4 files were found in the uploaded ZIP.")
+            for member in sorted(members):
+                if controller._is_cancelled(job_id, generation):
+                    return
+                target = tmpdir_path / Path(member).name
+                target.write_bytes(archive.read(member))
+                camera_key = target.stem.upper().replace(" ", "_")
+                camera_cfg = layout["cameras"].get(camera_key, {})
+                process_video(
+                    target,
+                    store_id,
+                    camera_cfg.get("camera_id", camera_key),
+                    camera_cfg,
+                    _clip_start(camera_cfg.get("clip_start_utc")),
+                    [],
+                    writer,
+                    UPLOAD_SAMPLE_STRIDE,
+                    UPLOAD_MAX_SECONDS,
+                )
 
 
-def kill_process_group(process: subprocess.Popen[str]) -> None:
-    try:
-        if sys.platform == "win32":
-            subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)], capture_output=True, text=True)
-            return
-        os.killpg(process.pid, signal.SIGKILL)
-    except Exception:
-        process.kill()
+def _clip_start(value: str | None) -> float:
+    if value:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    return datetime(2026, 4, 10, 20, 10, tzinfo=timezone.utc).timestamp()
