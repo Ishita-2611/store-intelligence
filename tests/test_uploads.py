@@ -6,7 +6,13 @@ from starlette.datastructures import UploadFile
 
 from app.main import app
 from app import uploads
-from app.uploads import UploadJob, ensure_zip, upload_controller
+from app.uploads import (
+    UploadJob,
+    camera_id_for_filename,
+    ensure_zip,
+    upload_controller,
+    write_precomputed_events_for_upload,
+)
 
 
 client = TestClient(app)
@@ -96,3 +102,23 @@ def test_uploaded_detector_uses_bounded_analysis_window(monkeypatch, tmp_path) -
     assert captured["generation"] == generation
     assert upload_controller.status("bounded")["status"] == "completed"
     assert upload_controller.status("bounded")["analysis_window_seconds"] == 60.0
+
+
+def test_challenge_camera_upload_can_use_precomputed_events(tmp_path) -> None:
+    events_path = tmp_path / "cam1-events.jsonl"
+
+    write_precomputed_events_for_upload("CAM 1.mp4", events_path)
+    rows = [line for line in events_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    assert rows
+    assert camera_id_for_filename("CAM 1.mp4") == "CAM_SKINCARE_01"
+    assert all('"camera_id": "CAM_SKINCARE_01"' in row for row in rows)
+
+
+def test_challenge_sample_endpoint_loads_events() -> None:
+    response = client.post("/uploads/challenge-sample", json={"filename": "CAM 1.mp4"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "completed"
+    assert payload["accepted_events"] > 0

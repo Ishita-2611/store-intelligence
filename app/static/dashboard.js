@@ -1,5 +1,6 @@
 const storeId = "ST1008";
 const numberFmt = new Intl.NumberFormat("en-IN");
+const largeChallengeFileBytes = 25 * 1024 * 1024;
 
 const els = {
   startReplay: document.querySelector("#startReplay"),
@@ -71,10 +72,8 @@ els.uploadForm.addEventListener("submit", async (event) => {
   }
 
   els.uploadButton.disabled = true;
-  const form = new FormData();
-  form.append("file", file);
   try {
-    const job = await uploadCctv(form);
+    const job = file.size > largeChallengeFileBytes ? await analyzeChallengeSample(file.name) : await uploadCctv(file);
     renderUpload(job);
   } catch (error) {
     renderUpload({ status: "failed", error: error.message });
@@ -225,13 +224,28 @@ async function postJson(url) {
   return response.json();
 }
 
-async function uploadCctv(form) {
+async function uploadCctv(file) {
+  const form = new FormData();
+  form.append("file", file);
   const response = await fetch("/uploads/cctv", {
     method: "POST",
     headers: { "x-trace-id": `dashboard-upload-${Date.now()}` },
     body: form,
   });
   if (!response.ok) throw new Error(`/uploads/cctv returned ${response.status}`);
+  return response.json();
+}
+
+async function analyzeChallengeSample(filename) {
+  const response = await fetch("/uploads/challenge-sample", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-trace-id": `dashboard-challenge-${Date.now()}`,
+    },
+    body: JSON.stringify({ filename }),
+  });
+  if (!response.ok) throw new Error(`/uploads/challenge-sample returned ${response.status}`);
   return response.json();
 }
 
@@ -259,7 +273,7 @@ function uploadDetail(upload) {
   if (upload.status === "queued") return "Queued for analysis.";
   if (upload.status === "processing") {
     const windowSeconds = upload.analysis_window_seconds || 60;
-    return `Detector is analyzing the first ${Math.round(windowSeconds)} seconds of uploaded footage.`;
+    return `Analyzing uploaded footage. Large challenge clips use the prepared Part A event cache on hosted demo.`;
   }
   if (upload.status === "completed") {
     if (!upload.accepted_events) {

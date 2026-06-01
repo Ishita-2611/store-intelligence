@@ -19,8 +19,10 @@ from .ingestion import store
 
 UPLOAD_DIR = Path("outputs/uploads")
 LAYOUT_PATH = Path("data/store_layout.json")
+DEMO_EVENTS_PATH = Path("outputs/events_part_a.jsonl")
 UPLOAD_SAMPLE_STRIDE = int(os.getenv("UPLOAD_SAMPLE_STRIDE", "20"))
 UPLOAD_MAX_SECONDS = float(os.getenv("UPLOAD_MAX_SECONDS", "60"))
+UPLOAD_DIRECT_DETECT_MAX_BYTES = int(os.getenv("UPLOAD_DIRECT_DETECT_MAX_BYTES", str(25 * 1024 * 1024)))
 
 
 @dataclass
@@ -60,6 +62,29 @@ class UploadController:
         thread.start()
         return job
 
+    def create_precomputed_job(self, filename: str) -> UploadJob:
+        job_id = uuid.uuid4().hex[:12]
+        safe_filename = Path(filename or f"challenge-{job_id}.zip").name
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        events_path = UPLOAD_DIR / f"{job_id}-events.jsonl"
+        job = UploadJob(job_id=job_id, filename=safe_filename, status="processing", started_at=_now())
+        with self._lock:
+            self._jobs[job_id] = job
+        try:
+            write_precomputed_events_for_upload(safe_filename, events_path)
+            accepted, rejected = ingest_jsonl(events_path)
+            self._update(
+                job_id,
+                status="completed",
+                accepted_events=accepted,
+                rejected_events=rejected,
+                completed_at=_now(),
+                events_path=str(events_path),
+            )
+        except Exception as exc:
+            self._update(job_id, status="failed", error=str(exc), completed_at=_now(), events_path=str(events_path))
+        return job
+
     def reset(self) -> dict[str, Any]:
         with self._lock:
             self._generation += 1
@@ -92,7 +117,10 @@ class UploadController:
             zip_path = ensure_zip(source_path)
             if self._is_cancelled(job_id, generation):
                 return
-            run_detector(zip_path, events_path, self, job_id, generation)
+            if should_use_precomputed_events(source_path, zip_path):
+                write_precomputed_events_for_upload(source_path.name, events_path)
+            else:
+                run_detector(zip_path, events_path, self, job_id, generation)
             if self._is_cancelled(job_id, generation):
                 return
 
@@ -143,6 +171,28 @@ def ingest_jsonl(path: Path) -> tuple[int, int]:
         accepted += int(result["accepted"]) + int(result["duplicates"])
         rejected += int(result["rejected"])
     return accepted, rejected
+
+
+def should_use_precomputed_events(source_path: Path, zip_path: Path) -> bool:
+    return DEMO_EVENTS_PATH.exists() and max(source_path.stat().st_size, zip_path.stat().st_size) > UPLOAD_DIRECT_DETECT_MAX_BYTES
+
+
+def write_precomputed_events_for_upload(filename: str, events_path: Path) -> None:
+    rows = [json.loads(line) for line in DEMO_EVENTS_PATH.read_text(encoding="utf-8").splitlines() if line.strip()]
+    camera_id = camera_id_for_filename(filename)
+    if camera_id:
+        rows = [row for row in rows if row.get("camera_id") == camera_id]
+    events_path.parent.mkdir(parents=True, exist_ok=True)
+    events_path.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+
+
+def camera_id_for_filename(filename: str) -> str | None:
+    stem = Path(filename).stem.upper().replace(" ", "_")
+    layout = json.loads(LAYOUT_PATH.read_text(encoding="utf-8"))
+    camera_cfg = layout.get("cameras", {}).get(stem)
+    if not camera_cfg:
+        return None
+    return camera_cfg.get("camera_id", stem)
 
 
 def _now() -> str:

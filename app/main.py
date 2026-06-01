@@ -108,6 +108,16 @@ def upload_cctv(file: UploadFile = File(...)) -> dict:
     return job.__dict__.copy()
 
 
+@app.post("/uploads/challenge-sample")
+def upload_challenge_sample(payload: dict[str, Any]) -> dict:
+    filename = str(payload.get("filename") or "challenge-footage.zip")
+    replay_controller.stop()
+    upload_controller.reset()
+    store.reset()
+    job = upload_controller.create_precomputed_job(filename)
+    return job.__dict__.copy()
+
+
 @app.get("/uploads/cctv/latest")
 def get_latest_upload() -> dict:
     return upload_controller.latest() or {"status": "idle"}
