@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from .errors import StoreUnavailableError
 from .models import StoreEvent
+from .normalize import normalize_event
 
 
 class EventStore:
@@ -24,10 +25,11 @@ class EventStore:
         with self._lock:
             self._ensure_available()
             for index, raw in enumerate(raw_events):
+                normalized = normalize_event(raw)
                 try:
-                    event = StoreEvent.model_validate(raw)
+                    event = StoreEvent.model_validate(normalized)
                 except ValidationError as exc:
-                    errors.append({"index": index, "event_id": raw.get("event_id"), "errors": exc.errors()})
+                    errors.append({"index": index, "event_id": normalized.get("event_id") or raw.get("event_id"), "errors": exc.errors()})
                     continue
 
                 if event.event_id in self._events_by_id:

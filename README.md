@@ -24,6 +24,8 @@ The event stream is newline-delimited JSON and follows the challenge schema:
 - `BILLING_QUEUE_ABANDON` when a visitor leaves the billing zone and no POS transaction follows in the next five minutes.
 - `is_staff=true` for tracks observed in staff/back-of-house zones.
 
+The API also accepts the provided `sample_events.jsonl` compatibility format (`id_token`, `store_code`, `event_timestamp`, `zone_entered`, `queue_completed`, etc.) and normalizes it into the canonical schema during ingest.
+
 The current baseline uses OpenCV HOG person detection plus background-subtraction fallback. This avoids external model downloads and gives us a reproducible event contract. A heavier detector such as YOLOv8/RT-DETR can replace `detect_people()` later without changing downstream API work.
 
 ## Part B: Intelligence API
@@ -54,6 +56,8 @@ Run tests:
 ```powershell
 python -m pytest tests -q
 ```
+
+The suite includes checks against the provided sample events JSONL and POS CSV column shape.
 
 ## Part C: Production Readiness
 

@@ -224,6 +224,12 @@ def load_pos_times(path: str) -> dict[str, list[datetime]]:
     with open(path, newline="", encoding="utf-8-sig") as fh:
         for row in csv.DictReader(fh):
             store_id = row.get("store_id")
+            timestamp = row.get("timestamp")
+            if timestamp:
+                dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                by_store.setdefault(store_id or "UNKNOWN_STORE", []).append(dt)
+                continue
+
             order_date = row.get("order_date")
             order_time = row.get("order_time")
             if not store_id or not order_date or not order_time:
