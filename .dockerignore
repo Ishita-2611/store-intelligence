@@ -11,4 +11,4 @@ env
 *.xls
 *.csv
 *.pdf
-
+!data/pos_transactions.csv

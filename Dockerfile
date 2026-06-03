@@ -15,8 +15,9 @@ RUN pip install --no-cache-dir -r requirements-api.txt
 COPY app ./app
 COPY pipeline ./pipeline
 COPY data ./data
-COPY outputs ./outputs
 COPY README.md .
+
+RUN mkdir -p outputs/uploads
 
 EXPOSE 8000
 
