@@ -1,6 +1,5 @@
 const storeId = "ST1076";
 const numberFmt = new Intl.NumberFormat("en-IN");
-const largeChallengeFileBytes = 25 * 1024 * 1024;
 
 const els = {
   startReplay: document.querySelector("#startReplay"),
@@ -73,7 +72,7 @@ els.uploadForm.addEventListener("submit", async (event) => {
 
   els.uploadButton.disabled = true;
   try {
-    const job = file.size > largeChallengeFileBytes ? await analyzeChallengeSample(file.name) : await uploadCctv(file);
+    const job = await uploadCctv(file);
     renderUpload(job);
   } catch (error) {
     renderUpload({ status: "failed", error: error.message });
@@ -236,19 +235,6 @@ async function uploadCctv(file) {
   return response.json();
 }
 
-async function analyzeChallengeSample(filename) {
-  const response = await fetch("/uploads/challenge-sample", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-trace-id": `dashboard-challenge-${Date.now()}`,
-    },
-    body: JSON.stringify({ filename }),
-  });
-  if (!response.ok) throw new Error(`/uploads/challenge-sample returned ${response.status}`);
-  return response.json();
-}
-
 function percent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -273,11 +259,11 @@ function uploadDetail(upload) {
   if (upload.status === "queued") return "Queued for analysis.";
   if (upload.status === "processing") {
     const windowSeconds = upload.analysis_window_seconds || 60;
-    return `Analyzing uploaded footage. Large clips use the committed sample-event cache on hosted demo.`;
+    return `Analyzing the uploaded footage with the detector. Results depend on visible people, camera naming, and zone coverage.`;
   }
   if (upload.status === "completed") {
     if (!upload.accepted_events) {
-      return "Analysis completed, but no customer events were detected. Try CAM 1, CAM 2, CAM 3, CAM 5, or the full CCTV ZIP; CAM 4 is staff-only.";
+      return "Analysis completed, but no customer events were detected. Use Replay sample for the provided event stream, or upload complete raw CCTV with camera names matching the layout.";
     }
     return `${numberFmt.format(upload.accepted_events || 0)} events loaded, ${numberFmt.format(upload.rejected_events || 0)} rejected.`;
   }

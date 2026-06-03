@@ -23,7 +23,7 @@ DEMO_EVENTS_PATH = Path("data/sample_events.jsonl")
 UPLOAD_SAMPLE_STRIDE = int(os.getenv("UPLOAD_SAMPLE_STRIDE", "20"))
 UPLOAD_MAX_SECONDS = float(os.getenv("UPLOAD_MAX_SECONDS", "60"))
 UPLOAD_DIRECT_DETECT_MAX_BYTES = int(os.getenv("UPLOAD_DIRECT_DETECT_MAX_BYTES", str(25 * 1024 * 1024)))
-UPLOAD_USE_SAMPLE_EVENTS = os.getenv("UPLOAD_USE_SAMPLE_EVENTS", "true").lower() not in {"0", "false", "no"}
+UPLOAD_USE_SAMPLE_EVENTS = os.getenv("UPLOAD_USE_SAMPLE_EVENTS", "false").lower() in {"1", "true", "yes"}
 
 
 @dataclass
@@ -177,9 +177,7 @@ def ingest_jsonl(path: Path) -> tuple[int, int]:
 def should_use_precomputed_events(source_path: Path, zip_path: Path) -> bool:
     if not DEMO_EVENTS_PATH.exists():
         return False
-    if UPLOAD_USE_SAMPLE_EVENTS:
-        return True
-    return max(source_path.stat().st_size, zip_path.stat().st_size) > UPLOAD_DIRECT_DETECT_MAX_BYTES
+    return UPLOAD_USE_SAMPLE_EVENTS and max(source_path.stat().st_size, zip_path.stat().st_size) > UPLOAD_DIRECT_DETECT_MAX_BYTES
 
 
 def write_precomputed_events_for_upload(filename: str, events_path: Path) -> None:

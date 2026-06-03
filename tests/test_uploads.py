@@ -106,10 +106,20 @@ def test_uploaded_detector_uses_bounded_analysis_window(monkeypatch, tmp_path) -
     assert upload_controller.status("bounded")["analysis_window_seconds"] == 60.0
 
 
-def test_uploaded_files_use_committed_sample_events_by_default(tmp_path) -> None:
+def test_uploaded_files_run_detector_by_default(tmp_path) -> None:
     source_zip = tmp_path / "store-upload.zip"
     with zipfile.ZipFile(source_zip, "w") as archive:
         archive.writestr("CCTV Footage/unknown-camera.mp4", b"fake-video")
+
+    assert should_use_precomputed_events(source_zip, source_zip) is False
+
+
+def test_uploaded_files_can_opt_into_committed_sample_events(monkeypatch, tmp_path) -> None:
+    source_zip = tmp_path / "store-upload.zip"
+    with zipfile.ZipFile(source_zip, "w") as archive:
+        archive.writestr("CCTV Footage/unknown-camera.mp4", b"fake-video")
+    monkeypatch.setattr(uploads, "UPLOAD_USE_SAMPLE_EVENTS", True)
+    monkeypatch.setattr(uploads, "UPLOAD_DIRECT_DETECT_MAX_BYTES", 1)
 
     assert should_use_precomputed_events(source_zip, source_zip) is True
 
