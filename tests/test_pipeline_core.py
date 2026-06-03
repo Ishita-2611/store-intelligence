@@ -23,18 +23,18 @@ def test_centroid_tracker_reuses_track_then_expires_missing_track() -> None:
 
 
 def test_zone_helpers_match_bbox_foot_point() -> None:
-    zones = [{"zone_id": "SKINCARE", "polygon": [[0, 0], [100, 0], [100, 100], [0, 100]]}]
+    zones = [{"zone_id": "PURPLLE_MUM_1076_Z01", "polygon": [[0, 0], [100, 0], [100, 100], [0, 100]]}]
 
     assert bbox_anchor((10, 10, 20, 40)) == (20.0, 50)
     assert point_in_polygon((20, 50), zones[0]["polygon"])
-    assert containing_zones((10, 10, 20, 40), zones) == ["SKINCARE"]
+    assert containing_zones((10, 10, 20, 40), zones) == ["PURPLLE_MUM_1076_Z01"]
     assert containing_zones((110, 110, 20, 40), zones) == []
 
 
 def test_jsonl_writer_persists_valid_events(tmp_path) -> None:
     out = tmp_path / "events.jsonl"
     event = StoreEvent(
-        store_id="ST1008",
+        store_id="ST1076",
         camera_id="CAM_ENTRY_01",
         visitor_id="VIS_1",
         event_type="ENTRY",

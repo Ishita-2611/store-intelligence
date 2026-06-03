@@ -10,7 +10,7 @@ from typing import Any
 from .ingestion import store
 
 
-DEMO_EVENTS_PATH = Path("outputs/events_part_a.jsonl")
+DEMO_EVENTS_PATH = Path("data/sample_events.jsonl")
 
 
 @dataclass

@@ -19,7 +19,7 @@ from .ingestion import store
 
 UPLOAD_DIR = Path("outputs/uploads")
 LAYOUT_PATH = Path("data/store_layout.json")
-DEMO_EVENTS_PATH = Path("outputs/events_part_a.jsonl")
+DEMO_EVENTS_PATH = Path("data/sample_events.jsonl")
 UPLOAD_SAMPLE_STRIDE = int(os.getenv("UPLOAD_SAMPLE_STRIDE", "20"))
 UPLOAD_MAX_SECONDS = float(os.getenv("UPLOAD_MAX_SECONDS", "60"))
 UPLOAD_DIRECT_DETECT_MAX_BYTES = int(os.getenv("UPLOAD_DIRECT_DETECT_MAX_BYTES", str(25 * 1024 * 1024)))
@@ -189,7 +189,8 @@ def write_precomputed_events_for_upload(filename: str, events_path: Path) -> Non
 def camera_id_for_filename(filename: str) -> str | None:
     stem = Path(filename).stem.upper().replace(" ", "_")
     layout = json.loads(LAYOUT_PATH.read_text(encoding="utf-8"))
-    camera_cfg = layout.get("cameras", {}).get(stem)
+    cameras = layout.get("cameras", {})
+    camera_cfg = cameras.get(stem) or cameras.get(stem.replace("_", ""))
     if not camera_cfg:
         return None
     return camera_cfg.get("camera_id", stem)

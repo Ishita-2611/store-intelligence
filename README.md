@@ -1,32 +1,34 @@
 # Store Intelligence Challenge
 
-This repository is being built in challenge parts. Part A is implemented first: a CCTV-to-events detection pipeline that emits the required structured JSONL schema.
+This repository is configured around the latest provided challenge resources:
+
+- `data/sample_events.jsonl` is the normalized default replay stream from the provided `sample_eventsbe42122.jsonl`.
+- `data/store_layout.json` is an inferred `ST1076` layout based on the cameras and zones present in the new sample events.
+- The provided POS CSV format is supported, including `order_date` plus `order_time` columns. The supplied POS rows are for `ST1008`, while the latest sample-event stream is for `ST1076`, so the default dashboard uses the event stream as the authoritative demo dataset.
 
 ## Part A: Detection Pipeline
 
-Run the pipeline against the uploaded CCTV zip:
+Run the detector when raw CCTV clips and a matching layout are available:
 
 ```powershell
-python -m pipeline.detect --video-zip "C:\Users\ishit\Downloads\CCTV Footage-20260529T160731Z-3-00144614ea.zip" --layout data\store_layout.json --pos-csv "C:\Users\ishit\Downloads\Brigade_Bangalore_10_April_26 (1)bc6219c.csv" --out outputs\events_part_a.jsonl
+python -m pipeline.detect --video-zip "<path-to-cctv.zip>" --layout data\store_layout.json --pos-csv "D:\downloads\POS - sample transactionsb1e826f.csv" --out outputs\detected_events.jsonl
 ```
 
-For a fast smoke test:
+For a quick smoke run:
 
 ```powershell
-python -m pipeline.detect --video-zip "C:\Users\ishit\Downloads\CCTV Footage-20260529T160731Z-3-00144614ea.zip" --layout data\store_layout.json --pos-csv "C:\Users\ishit\Downloads\Brigade_Bangalore_10_April_26 (1)bc6219c.csv" --out outputs\events_part_a_sample.jsonl --max-seconds 15
+python -m pipeline.detect --video-zip "<path-to-cctv.zip>" --layout data\store_layout.json --pos-csv "D:\downloads\POS - sample transactionsb1e826f.csv" --out outputs\detected_events_sample.jsonl --max-seconds 15
 ```
 
 The event stream is newline-delimited JSON and follows the challenge schema:
 
-- `ENTRY`, `EXIT`, and `REENTRY` from the entry camera.
+- `ENTRY`, `EXIT`, and `REENTRY` from entry/exit cameras.
 - `ZONE_ENTER`, `ZONE_EXIT`, and periodic `ZONE_DWELL`.
-- `BILLING_QUEUE_JOIN` from the billing camera when a tracked visitor enters the billing zone.
-- `BILLING_QUEUE_ABANDON` when a visitor leaves the billing zone and no POS transaction follows in the next five minutes.
-- `is_staff=true` for tracks observed in staff/back-of-house zones.
+- `BILLING_QUEUE_JOIN` when a tracked visitor enters the billing zone.
+- `BILLING_QUEUE_ABANDON` when a visitor leaves billing and no matching POS transaction follows.
+- `is_staff=true` for tracks observed in staff or non-customer areas.
 
-The API also accepts the provided `sample_events.jsonl` compatibility format (`id_token`, `store_code`, `event_timestamp`, `zone_entered`, `queue_completed`, etc.) and normalizes it into the canonical schema during ingest.
-
-The current baseline uses OpenCV HOG person detection plus background-subtraction fallback. This avoids external model downloads and gives us a reproducible event contract. A heavier detector such as YOLOv8/RT-DETR can replace `detect_people()` later without changing downstream API work.
+The API also accepts the provided sample-event compatibility format (`id_token`, `store_code`, `event_timestamp`, `zone_entered`, `queue_completed`, etc.) and normalizes it into the canonical schema during ingest.
 
 ## Part B: Intelligence API
 
@@ -47,17 +49,16 @@ Implemented endpoints:
 - `POST /events/ingest` accepts up to 500 events, validates each event, deduplicates by `event_id`, and returns partial-success errors.
 - `GET /stores/{store_id}/metrics` returns unique visitors, conversion rate, average dwell by zone, queue depth, and abandonment rate.
 - `GET /stores/{store_id}/funnel` returns session-based Entry -> Zone Visit -> Billing Queue -> Purchase counts and drop-off.
-- `GET /stores/{store_id}/heatmap` returns zone visit frequency, average dwell, normalized heat score, and a low-confidence flag for small samples.
-- `GET /stores/{store_id}/anomalies` returns queue, conversion, dead-zone, or no-traffic anomalies with suggested actions.
-- `GET /health` returns latest event timestamps per store and `STALE_FEED` warnings.
+- `GET /stores/{store_id}/heatmap` returns zone frequency, average dwell, normalized heat score, and data-confidence status.
+- `GET /stores/{store_id}/anomalies` returns queue, conversion, dead-zone, or no-traffic signals with suggested actions.
+- `GET /health` returns latest event timestamps per store and stale-feed warnings.
 
-Run tests:
+Load the default provided sample events into a running API:
 
 ```powershell
-python -m pytest tests -q
+$events = Get-Content data\sample_events.jsonl | ForEach-Object { $_ | ConvertFrom-Json }
+Invoke-RestMethod -Uri http://127.0.0.1:8000/events/ingest -Method Post -ContentType application/json -Body (@{events=@($events)} | ConvertTo-Json -Depth 20)
 ```
-
-The suite includes checks against the provided sample events JSONL and POS CSV column shape.
 
 ## Part C: Production Readiness
 
@@ -69,11 +70,10 @@ docker compose up --build
 
 Deploy on Render:
 
-1. Open Render and create a new Blueprint from this GitHub repository.
-2. Select `render.yaml`.
-3. After the service is live, use `https://<your-render-service>.onrender.com/dashboard` as the demo link.
-
-The Docker container reads Render's `PORT` environment variable and exposes `/health` for deployment health checks.
+1. Create a new Web Service or Blueprint from this GitHub repository.
+2. Keep the Docker defaults from `render.yaml` or the repository `Dockerfile`.
+3. Set the health check path to `/healthz`.
+4. After the service is live, use `https://<your-render-service>.onrender.com/dashboard` as the demo link.
 
 Five-command local setup:
 
@@ -87,52 +87,36 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 Production behaviors currently included:
 
-- Container entrypoint via `docker-compose.yml`.
-- Slim API container using `requirements-api.txt`; local `requirements.txt` keeps detection/test dependencies.
-- Structured JSON request logs with `trace_id`, `store_id`, `endpoint`, `latency_ms`, `event_count`, and `status_code`.
+- Docker entrypoint and Render-friendly `PORT` handling.
+- Slim API dependencies in `requirements-api.txt`; local detection/test dependencies in `requirements.txt`.
+- Structured JSON request logs with `trace_id`, `store_id`, endpoint, latency, event count, and status code.
 - Idempotent ingest by `event_id`.
-- Partial-success ingest responses for malformed events.
+- Partial-success ingest responses for malformed event batches.
 - Structured `503` response if the event store is unavailable.
-- Tests for empty/all-staff traffic, zero purchases, re-entry deduplication, idempotent ingest, health, and API analytics.
-
-Load generated Part A events into the running API:
-
-```powershell
-$events = Get-Content outputs\events_part_a.jsonl | ForEach-Object { $_ | ConvertFrom-Json }
-Invoke-RestMethod -Uri http://127.0.0.1:8000/events/ingest -Method Post -ContentType application/json -Body (@{events=@($events | Select-Object -First 500)} | ConvertTo-Json -Depth 20)
-Invoke-RestMethod -Uri http://127.0.0.1:8000/events/ingest -Method Post -ContentType application/json -Body (@{events=@($events | Select-Object -Skip 500)} | ConvertTo-Json -Depth 20)
-```
 
 ## Part D: AI Engineering
 
-Documentation for the AI-assisted engineering decisions is in:
+Documentation for AI-assisted engineering decisions is in:
 
 - `DESIGN.md`
 - `CHOICES.md`
 - `docs/DESIGN.md`
 - `docs/CHOICES.md`
 
-Each test file also starts with a `# PROMPT:` and `# CHANGES MADE:` block explaining what AI was asked to draft and what was changed afterward.
+Each test file starts with a `# PROMPT:` and `# CHANGES MADE:` block explaining what AI was asked to draft and what was changed afterward.
 
 ## Part E: Live Dashboard
 
-The bonus dashboard is served by the same FastAPI app:
+The dashboard is served by the same FastAPI app:
 
 ```text
 http://127.0.0.1:8000/dashboard
 ```
 
-Use **Replay sample** to stream the prepared Part A event file into the API in timed batches. This is a quick demo path for reviewers when they do not want to wait for full CCTV processing.
+The primary action is uploading CCTV footage for analysis. The secondary `Replay sample` action streams the new `ST1076` sample-event resource for a quick reviewer demo.
 
-Use **Analyze footage** to upload a CCTV `.zip` or `.mp4` from the dashboard. The API runs the Part A detector in the background, ingests the generated events, and refreshes the analytics from that uploaded footage.
+Run tests:
 
-For hosted demos, uploaded footage is analyzed with a bounded pass over the first 60 seconds so Render's free instance can return results quickly. Use `UPLOAD_MAX_SECONDS` and `UPLOAD_SAMPLE_STRIDE` environment variables to tune that window.
-
-Dashboard support endpoints:
-
-- `POST /demo/replay/start`
-- `POST /demo/replay/reset`
-- `GET /demo/replay/status`
-- `POST /uploads/cctv`
-- `GET /uploads/cctv/latest`
-- `GET /uploads/cctv/{job_id}`
+```powershell
+python -m pytest tests -q
+```

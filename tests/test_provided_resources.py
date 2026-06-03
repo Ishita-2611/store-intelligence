@@ -35,6 +35,14 @@ def test_provided_sample_events_ingest_through_compatibility_normalizer() -> Non
     assert funnel["stages"][0]["count"] >= 3
 
 
+def test_repo_default_replay_file_uses_latest_provided_resource() -> None:
+    replay_rows = [json.loads(line) for line in Path("data/sample_events.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    assert replay_rows
+    assert {row["store_id"] for row in replay_rows} == {"ST1076"}
+    assert all(row["event_type"].isupper() for row in replay_rows)
+
+
 def test_provided_pos_csv_has_expected_columns() -> None:
     with POS_PATH.open(newline="", encoding="utf-8-sig") as fh:
         rows = list(csv.DictReader(fh))

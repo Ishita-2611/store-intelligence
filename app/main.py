@@ -56,7 +56,7 @@ def get_metrics(store_id: str) -> dict:
 @app.get("/Metrics")
 @app.get("/metrics")
 def get_default_metrics() -> dict:
-    return get_metrics("ST1008")
+    return get_metrics("ST1076")
 
 
 @app.get("/stores/{store_id}/funnel")

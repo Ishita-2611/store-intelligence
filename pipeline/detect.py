@@ -18,7 +18,7 @@ from .zones import containing_zones
 
 
 DEFAULT_LAYOUT = Path("data/store_layout.json")
-DEFAULT_OUT = Path("outputs/events_part_a.jsonl")
+DEFAULT_OUT = Path("outputs/detected_events.jsonl")
 
 
 def parse_args() -> argparse.Namespace:

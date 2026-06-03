@@ -1,72 +1,57 @@
 {
-  "store_id": "ST1008",
-  "store_name": "Brigade_Bangalore",
-  "city": "Bangalore",
-  "business_date": "2026-04-10",
+  "store_id": "ST1076",
+  "store_name": "Purplle_Mumbai_1076",
+  "city": "Mumbai",
+  "business_date": "2026-03-08",
   "cameras": {
-    "CAM_1": {
-      "camera_id": "CAM_SKINCARE_01",
-      "clip_start_utc": "2026-04-10T20:09:25Z",
-      "detector_scale": 0.45,
-      "min_motion_area": 2600,
-      "zones": [
-        {"zone_id": "EB_KOREAN", "polygon": [[0, 180], [360, 130], [390, 1060], [0, 1080]]},
-        {"zone_id": "FACE_SHOP", "polygon": [[360, 100], [820, 95], [810, 980], [390, 1060]]},
-        {"zone_id": "GOOD_VIBES", "polygon": [[820, 90], [1130, 90], [1110, 900], [810, 980]]},
-        {"zone_id": "DERMDOC", "polygon": [[1130, 85], [1540, 90], [1450, 910], [1110, 900]]},
-        {"zone_id": "MAKEUP_UNIT", "polygon": [[980, 650], [1560, 580], [1780, 1080], [920, 1080]]}
-      ]
-    },
-    "CAM_2": {
-      "camera_id": "CAM_MAKEUP_01",
-      "clip_start_utc": "2026-04-10T20:09:00Z",
-      "detector_scale": 0.45,
-      "min_motion_area": 3200,
-      "zones": [
-        {"zone_id": "ACCESSORIES", "polygon": [[0, 0], [360, 0], [380, 430], [0, 520]]},
-        {"zone_id": "ALPS_GOODNESS", "polygon": [[360, 40], [780, 55], [780, 900], [280, 880]]},
-        {"zone_id": "LAKME", "polygon": [[780, 70], [1180, 80], [1190, 890], [780, 900]]},
-        {"zone_id": "FACES_CANADA", "polygon": [[1180, 80], [1600, 90], [1600, 980], [1190, 890]]},
-        {"zone_id": "MAYBELLINE", "polygon": [[1600, 95], [1920, 100], [1920, 1080], [1600, 980]]},
-        {"zone_id": "MAKEUP_UNIT", "polygon": [[0, 520], [560, 430], [720, 1080], [0, 1080]]}
-      ]
-    },
-    "CAM_3": {
-      "camera_id": "CAM_ENTRY_01",
-      "clip_start_utc": "2026-04-10T20:09:00Z",
-      "detector_scale": 0.55,
-      "min_motion_area": 2800,
-      "entry_zone": "ENTRY_THRESHOLD",
-      "entry_trigger_zones": ["ENTRY_THRESHOLD", "FRONT_OF_HOUSE"],
-      "exit_zone": "OUTSIDE_GLASS",
-      "zones": [
-        {"zone_id": "OUTSIDE_GLASS", "polygon": [[1030, 260], [1920, 180], [1920, 1080], [900, 1080]]},
-        {"zone_id": "ENTRY_THRESHOLD", "polygon": [[760, 290], [1120, 230], [1120, 610], [740, 660]]},
-        {"zone_id": "FRONT_OF_HOUSE", "polygon": [[240, 210], [900, 180], [820, 1080], [0, 1080], [0, 460]]}
-      ]
-    },
-    "CAM_4": {
-      "camera_id": "CAM_BACK_OF_HOUSE_01",
-      "clip_start_utc": "2026-04-10T20:09:00Z",
-      "detector_scale": 0.5,
-      "min_motion_area": 2400,
-      "staff_zones": ["BACK_OF_HOUSE"],
-      "zones": [
-        {"zone_id": "BACK_OF_HOUSE", "polygon": [[0, 0], [1920, 0], [1920, 1080], [0, 1080]]}
-      ]
-    },
-    "CAM_5": {
-      "camera_id": "CAM_BILLING_01",
-      "clip_start_utc": "2026-04-10T20:09:00Z",
+    "CAM1": {
+      "camera_id": "CAM1",
+      "clip_start_utc": "2026-03-08T18:10:00Z",
       "detector_scale": 0.5,
       "min_motion_area": 2200,
-      "billing_zones": ["BILLING_COUNTER"],
-      "staff_zones": ["STAFF_STOCK"],
+      "entry_zone": "ENTRY_THRESHOLD",
+      "entry_trigger_zones": ["ENTRY_THRESHOLD"],
+      "exit_zone": "EXIT_THRESHOLD",
       "zones": [
-        {"zone_id": "BILLING_COUNTER", "polygon": [[380, 230], [880, 180], [900, 1080], [220, 1080]]},
-        {"zone_id": "DERMDOC", "polygon": [[0, 0], [620, 0], [580, 320], [0, 450]]},
-        {"zone_id": "STAFF_STOCK", "polygon": [[910, 0], [1480, 0], [1440, 540], [900, 620]]},
-        {"zone_id": "CASH_COUNTER", "polygon": [[120, 360], [760, 330], [760, 1080], [0, 1080]]}
+        {"zone_id": "ENTRY_THRESHOLD", "polygon": [[0, 0], [960, 0], [960, 540], [0, 540]]},
+        {"zone_id": "EXIT_THRESHOLD", "polygon": [[960, 0], [1920, 0], [1920, 1080], [960, 1080]]}
+      ]
+    },
+    "CAM2": {
+      "camera_id": "CAM2",
+      "clip_start_utc": "2026-03-08T18:10:00Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 2200,
+      "zones": [
+        {"zone_id": "PURPLLE_MUM_1076_Z01", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]}
+      ]
+    },
+    "CAM3": {
+      "camera_id": "CAM3",
+      "clip_start_utc": "2026-03-08T18:10:00Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 2200,
+      "zones": [
+        {"zone_id": "PURPLLE_MUM_1076_Z02", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]}
+      ]
+    },
+    "CAM4": {
+      "camera_id": "CAM4",
+      "clip_start_utc": "2026-03-08T18:10:00Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 2200,
+      "zones": [
+        {"zone_id": "PURPLLE_MUM_1076_Z03", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]}
+      ]
+    },
+    "PURPLLE_MUM_1076_CAM6": {
+      "camera_id": "PURPLLE_MUM_1076_CAM6",
+      "clip_start_utc": "2026-03-08T18:10:00Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 2200,
+      "billing_zones": ["PURPLLE_MUM_1076_Z_BILLING_01"],
+      "zones": [
+        {"zone_id": "PURPLLE_MUM_1076_Z_BILLING_01", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]}
       ]
     }
   }

@@ -111,8 +111,8 @@ def test_challenge_camera_upload_can_use_precomputed_events(tmp_path) -> None:
     rows = [line for line in events_path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
     assert rows
-    assert camera_id_for_filename("CAM 1.mp4") == "CAM_SKINCARE_01"
-    assert all('"camera_id": "CAM_SKINCARE_01"' in row for row in rows)
+    assert camera_id_for_filename("CAM 1.mp4") == "CAM1"
+    assert all('"camera_id": "CAM1"' in row for row in rows)
 
 
 def test_challenge_sample_endpoint_loads_events() -> None:
