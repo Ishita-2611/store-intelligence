@@ -32,8 +32,10 @@ def test_provided_sample_events_ingest_through_compatibility_normalizer() -> Non
     assert response.json()["accepted"] == len(events)
     metrics = client.get("/stores/ST1076/metrics").json()
     funnel = client.get("/stores/ST1076/funnel").json()
+    health = client.get("/health").json()
     assert metrics["unique_visitors"] >= 3
     assert funnel["stages"][0]["count"] >= 3
+    assert health["stores"]["ST1076"]["warning"] == "STALE_FEED"
 
 
 def test_repo_default_replay_file_uses_latest_provided_resource() -> None:

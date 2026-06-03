@@ -10,6 +10,7 @@ from app.uploads import (
     UploadJob,
     camera_id_for_filename,
     ensure_zip,
+    should_use_precomputed_events,
     upload_controller,
     write_precomputed_events_for_upload,
 )
@@ -83,6 +84,7 @@ def test_uploaded_detector_uses_bounded_analysis_window(monkeypatch, tmp_path) -
     source_zip = tmp_path / "clip.zip"
     with zipfile.ZipFile(source_zip, "w") as archive:
         archive.writestr("CCTV Footage/CAM 3.mp4", b"fake-video")
+    monkeypatch.setattr(uploads, "UPLOAD_USE_SAMPLE_EVENTS", False)
 
     def fake_run_detector(zip_path, events_path, _controller, job_id, generation):
         captured["zip_path"] = zip_path
@@ -102,6 +104,14 @@ def test_uploaded_detector_uses_bounded_analysis_window(monkeypatch, tmp_path) -
     assert captured["generation"] == generation
     assert upload_controller.status("bounded")["status"] == "completed"
     assert upload_controller.status("bounded")["analysis_window_seconds"] == 60.0
+
+
+def test_uploaded_files_use_committed_sample_events_by_default(tmp_path) -> None:
+    source_zip = tmp_path / "store-upload.zip"
+    with zipfile.ZipFile(source_zip, "w") as archive:
+        archive.writestr("CCTV Footage/unknown-camera.mp4", b"fake-video")
+
+    assert should_use_precomputed_events(source_zip, source_zip) is True
 
 
 def test_challenge_camera_upload_can_use_precomputed_events(tmp_path) -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -44,6 +44,13 @@ class StoreEvent(BaseModel):
             return value.replace("Z", "+00:00")
         return value
 
+    @field_validator("timestamp")
+    @classmethod
+    def default_naive_timestamp_to_utc(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
 
 class IngestRequest(BaseModel):
     events: list[dict[str, Any]] = Field(max_length=500)
@@ -54,4 +61,3 @@ class IngestResponse(BaseModel):
     duplicates: int
     rejected: int
     errors: list[dict[str, Any]]
-
