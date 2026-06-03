@@ -25,7 +25,7 @@ The Part C production layer adds Docker Compose, a healthcheck, structured JSON 
 
 ## Important Assumptions
 
-The latest provided resources include a sample-events JSONL for `ST1076` and a POS CSV for `ST1008`. The default demo now uses the `ST1076` sample events as the authoritative replay stream, normalizing the provided resource format into the canonical schema. The POS parser supports the supplied CSV format, but the shipped POS rows do not directly join to the `ST1076` event stream because they reference a different store. Raw CCTV processing remains available through the Part A pipeline when completed raw clips and a matching layout are available.
+The latest usable resources are committed under `data/`: the raw provided sample events, the normalized `ST1076` replay stream, the supplied POS CSV, and the inferred `ST1076` layout. The default demo uses the `ST1076` sample events as the authoritative replay stream, normalizing the provided resource format into the canonical schema. The POS parser supports the supplied CSV format, but the shipped POS rows do not directly join to the `ST1076` event stream because they reference `ST1008`. Raw CCTV processing remains available through the Part A pipeline when completed raw clips and a matching layout are available.
 
 The detection pipeline is a reproducible baseline, not a perfect CV system. It uses OpenCV HOG detection and background subtraction fallback because the challenge environment may not have model weights or GPU access. Confidence values are retained instead of suppressing low-confidence events, matching the problem statement's expectation that uncertainty should be visible downstream.
 
@@ -45,6 +45,6 @@ The test suite covers schema validation, idempotent ingest, partial-success hand
 
 ## Live Dashboard
 
-Part E adds a first-screen operational dashboard at `/dashboard`. It is served by the same FastAPI process, so Docker Compose starts the API and dashboard together. The dashboard can upload CCTV footage for analysis through `/uploads/cctv`; it also has a secondary sample replay that streams `data/sample_events.jsonl` into the in-memory event store in timed batches. While replay or upload processing is running, the browser polls the same production endpoints used by external clients: `/metrics`, `/funnel`, `/heatmap`, `/anomalies`, `/health`, and job status endpoints.
+Part E adds a first-screen operational dashboard at `/dashboard`. It is served by the same FastAPI process, so Docker Compose starts the API and dashboard together. The dashboard's reviewer path streams `data/sample_events.jsonl` into the in-memory event store in timed batches. CCTV upload remains available through `/uploads/cctv` for complete raw clips, but the committed demo does not depend on any old or external footage. While replay or upload processing is running, the browser polls the same production endpoints used by external clients: `/metrics`, `/funnel`, `/heatmap`, `/anomalies`, `/health`, and job status endpoints.
 
 This makes the dashboard a connected system demo rather than a static mock. The KPI strip shows visitors, conversion, queue depth, and data confidence. The funnel visualizes session drop-off. The heatmap ranks zone activity by visit count and dwell. The anomaly rail shows active operational signals or an all-clear state.

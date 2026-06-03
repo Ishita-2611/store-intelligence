@@ -2,22 +2,24 @@
 
 This repository is configured around the latest provided challenge resources:
 
-- `data/sample_events.jsonl` is the normalized default replay stream from the provided `sample_eventsbe42122.jsonl`.
+- `data/provided_sample_events.jsonl` is the raw sample event resource supplied with the new problem statement package.
+- `data/sample_events.jsonl` is the normalized default replay stream derived from that provided sample event file.
+- `data/pos_transactions.csv` is the supplied POS transaction resource.
 - `data/store_layout.json` is an inferred `ST1076` layout based on the cameras and zones present in the new sample events.
-- The provided POS CSV format is supported, including `order_date` plus `order_time` columns. The supplied POS rows are for `ST1008`, while the latest sample-event stream is for `ST1076`, so the default dashboard uses the event stream as the authoritative demo dataset.
+- The supplied POS rows are for `ST1008`, while the supplied sample-event stream is for `ST1076`. The API and parser support both files, but the default live demo uses the `ST1076` event stream as the authoritative dataset because there is no matching `ST1076` POS file in the provided resources.
 
 ## Part A: Detection Pipeline
 
 Run the detector when raw CCTV clips and a matching layout are available:
 
 ```powershell
-python -m pipeline.detect --video-zip "<path-to-cctv.zip>" --layout data\store_layout.json --pos-csv "D:\downloads\POS - sample transactionsb1e826f.csv" --out outputs\detected_events.jsonl
+python -m pipeline.detect --video-zip "<path-to-cctv.zip>" --layout data\store_layout.json --pos-csv data\pos_transactions.csv --out outputs\detected_events.jsonl
 ```
 
 For a quick smoke run:
 
 ```powershell
-python -m pipeline.detect --video-zip "<path-to-cctv.zip>" --layout data\store_layout.json --pos-csv "D:\downloads\POS - sample transactionsb1e826f.csv" --out outputs\detected_events_sample.jsonl --max-seconds 15
+python -m pipeline.detect --video-zip "<path-to-cctv.zip>" --layout data\store_layout.json --pos-csv data\pos_transactions.csv --out outputs\detected_events_sample.jsonl --max-seconds 15
 ```
 
 The event stream is newline-delimited JSON and follows the challenge schema:
@@ -28,7 +30,7 @@ The event stream is newline-delimited JSON and follows the challenge schema:
 - `BILLING_QUEUE_ABANDON` when a visitor leaves billing and no matching POS transaction follows.
 - `is_staff=true` for tracks observed in staff or non-customer areas.
 
-The API also accepts the provided sample-event compatibility format (`id_token`, `store_code`, `event_timestamp`, `zone_entered`, `queue_completed`, etc.) and normalizes it into the canonical schema during ingest.
+The API also accepts the provided sample-event compatibility format (`id_token`, `store_code`, `event_timestamp`, `zone_entered`, `queue_completed`, etc.) and normalizes it into the canonical schema during ingest. The committed `data/provided_sample_events.jsonl` file exercises that path.
 
 ## Part B: Intelligence API
 
@@ -113,7 +115,7 @@ The dashboard is served by the same FastAPI app:
 http://127.0.0.1:8000/dashboard
 ```
 
-The primary action is uploading CCTV footage for analysis. The secondary `Replay sample` action streams the new `ST1076` sample-event resource for a quick reviewer demo.
+The primary reviewer demo is `Replay sample`, which streams the new `ST1076` sample-event resource into the API in simulated real time. CCTV upload remains available for raw clips when a complete video resource is present.
 
 Run tests:
 

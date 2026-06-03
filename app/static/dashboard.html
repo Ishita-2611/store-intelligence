@@ -15,7 +15,7 @@
             <p class="eyebrow">Purplle Mumbai - ST1076</p>
           </div>
           <h1>Store Intelligence Command Center</h1>
-          <p class="subtitle">Upload CCTV footage for analysis, or replay the prepared challenge sample for a quick dashboard demo.</p>
+          <p class="subtitle">Replay the provided ST1076 sample stream, or upload complete CCTV footage when raw clips are available.</p>
         </div>
         <div class="actions" aria-label="Dashboard controls">
           <button id="startReplay" type="button" title="Replay the preprocessed sample events">Replay sample</button>
@@ -47,8 +47,8 @@
       <section class="upload-band" aria-label="CCTV footage analysis">
         <div class="upload-copy">
           <p class="eyebrow">Part E - CCTV ingestion</p>
-          <h2>Analyze new store footage</h2>
-          <p>Upload a CCTV ZIP or MP4 clip and the system will run the Part A detector, ingest events, and refresh this dashboard.</p>
+          <h2>Analyze optional raw footage</h2>
+          <p>Upload a CCTV ZIP or MP4 clip when complete raw footage is available. The reviewer demo uses the committed sample stream.</p>
         </div>
         <form id="uploadForm" class="upload-form">
           <label class="file-picker" for="cctvFile">
@@ -60,7 +60,7 @@
         </form>
         <div class="upload-status">
           <strong id="uploadStatus">No upload running</strong>
-          <span id="uploadDetail">Upload CCTV to run a new analysis. Sample replay is only for quick demo data.</span>
+          <span id="uploadDetail">Use replay for the provided resource set, or upload raw CCTV for a new analysis.</span>
         </div>
       </section>
 

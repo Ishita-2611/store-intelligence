@@ -49,7 +49,7 @@ els.resetReplay.addEventListener("click", async () => {
     await postJson("/demo/replay/reset");
     els.cctvFile.value = "";
     els.fileName.textContent = "Choose CCTV footage";
-    renderUpload({ status: "idle" }, "Dashboard cleared. Upload CCTV to run a new analysis.");
+    renderUpload({ status: "idle" }, "Dashboard cleared. Replay the provided sample or upload raw CCTV.");
     await refresh();
   } catch (error) {
     renderUpload({ status: "failed", error: error.message });
@@ -170,7 +170,7 @@ function renderFunnel(payload) {
 function renderHeatmap(payload) {
   const zones = [...(payload.zones || [])].sort((a, b) => b.heat_score - a.heat_score);
   if (!zones.length) {
-    els.heatmap.innerHTML = `<div class="zone-tile" style="background:#eef3f5"><strong>No zones yet</strong><span>Upload footage or replay the sample to populate activity.</span></div>`;
+    els.heatmap.innerHTML = `<div class="zone-tile" style="background:#eef3f5"><strong>No zones yet</strong><span>Replay the provided sample or upload raw footage to populate activity.</span></div>`;
     return;
   }
   els.heatmap.innerHTML = zones
@@ -179,7 +179,7 @@ function renderHeatmap(payload) {
       const light = 92 - Math.min(35, zone.heat_score * 0.35);
       return `<div class="zone-tile" style="background:hsl(${hue} 70% ${light}%)">
         <strong>${zone.zone_id.replaceAll("_", " ")}</strong>
-        <span>${numberFmt.format(zone.visit_count)} visits · ${Math.round(zone.avg_dwell_ms / 1000)}s dwell</span>
+        <span>${numberFmt.format(zone.visit_count)} visits - ${Math.round(zone.avg_dwell_ms / 1000)}s dwell</span>
       </div>`;
     })
     .join("");
@@ -269,11 +269,11 @@ function staleFeedDetail(health) {
 }
 
 function uploadDetail(upload) {
-  if (!upload || upload.status === "idle") return "Upload CCTV to run a new analysis. Sample replay is only for quick demo data.";
+  if (!upload || upload.status === "idle") return "Use replay for the provided resource set, or upload raw CCTV for a new analysis.";
   if (upload.status === "queued") return "Queued for analysis.";
   if (upload.status === "processing") {
     const windowSeconds = upload.analysis_window_seconds || 60;
-    return `Analyzing uploaded footage. Large challenge clips use the prepared Part A event cache on hosted demo.`;
+    return `Analyzing uploaded footage. Large clips use the committed sample-event cache on hosted demo.`;
   }
   if (upload.status === "completed") {
     if (!upload.accepted_events) {
@@ -287,3 +287,4 @@ function uploadDetail(upload) {
 
 refresh();
 setInterval(refresh, 1500);
+
