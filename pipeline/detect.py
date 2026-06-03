@@ -145,7 +145,7 @@ def events_for_tracks(
     entry_trigger_zones = set(camera_cfg.get("entry_trigger_zones", [entry_zone] if entry_zone else []))
     exit_zone = camera_cfg.get("exit_zone")
 
-    queue_depth = sum(1 for track in tracks if billing_zones & track.zones)
+    active_queue_depth = sum(1 for track in tracks if billing_zones & track.zones)
 
     for track in tracks:
         current_zones = set(containing_zones(track.bbox, zones))
@@ -165,8 +165,9 @@ def events_for_tracks(
 
         for zone_id in sorted(entered):
             track.dwell_started_ms[zone_id] = frame_ms
-            if zone_id in billing_zones and queue_depth > 0:
-                events.append(_event(store_id, camera_id, track, "BILLING_QUEUE_JOIN", timestamp, zone_id, 0, queue_depth))
+            if zone_id in billing_zones:
+                active_queue_depth += 1
+                events.append(_event(store_id, camera_id, track, "BILLING_QUEUE_JOIN", timestamp, zone_id, 0, active_queue_depth))
             else:
                 events.append(_event(store_id, camera_id, track, "ZONE_ENTER", timestamp, zone_id, 0, None))
 
@@ -174,7 +175,9 @@ def events_for_tracks(
             dwell_ms = max(0, frame_ms - track.dwell_started_ms.get(zone_id, frame_ms))
             events.append(_event(store_id, camera_id, track, "ZONE_EXIT", timestamp, zone_id, dwell_ms, None))
             if zone_id in billing_zones and not has_pos_after(timestamp, store_pos_times):
-                events.append(_event(store_id, camera_id, track, "BILLING_QUEUE_ABANDON", timestamp, zone_id, dwell_ms, queue_depth))
+                events.append(_event(store_id, camera_id, track, "BILLING_QUEUE_ABANDON", timestamp, zone_id, dwell_ms, max(active_queue_depth - 1, 0)))
+            if zone_id in billing_zones:
+                active_queue_depth = max(active_queue_depth - 1, 0)
 
         for zone_id in sorted(current_zones):
             dwell_start = track.dwell_started_ms.get(zone_id, frame_ms)

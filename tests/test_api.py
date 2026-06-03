@@ -104,6 +104,18 @@ def test_funnel_heatmap_anomalies_and_health() -> None:
     assert health["stores"]["ST1076"]["warning"] == "STALE_FEED"
 
 
+def test_critical_anomaly_severity_for_deep_queue() -> None:
+    queue_events = [
+        event(f"q{i}", f"VIS_{i}", "BILLING_QUEUE_JOIN", f"2026-04-10T10:{i:02d}:00Z", "PURPLLE_MUM_1076_Z_BILLING_01", queue_depth=i)
+        for i in range(1, 7)
+    ]
+    client.post("/events/ingest", json={"events": queue_events})
+
+    anomalies = client.get("/stores/ST1076/anomalies").json()["anomalies"]
+
+    assert any(item["type"] == "BILLING_QUEUE_SPIKE" and item["severity"] == "CRITICAL" for item in anomalies)
+
+
 def test_zero_purchase_and_all_staff_edge_cases() -> None:
     all_staff = [
         event("staff-1", "VIS_STAFF", "ZONE_ENTER", "2026-04-10T11:00:00Z", "STAFF_ONLY", is_staff=True),

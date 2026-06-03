@@ -101,14 +101,23 @@ def compute_anomalies(events: list[StoreEvent]) -> list[dict]:
     anomalies = []
     metrics = compute_metrics(events)
     if metrics["queue_depth"] >= 3:
+        severity = "CRITICAL" if metrics["queue_depth"] >= 6 else "WARN"
         anomalies.append(
             {
                 "type": "BILLING_QUEUE_SPIKE",
-                "severity": "WARN",
+                "severity": severity,
                 "suggested_action": "Open an additional billing counter or move staff to checkout.",
             }
         )
-    if metrics["unique_visitors"] >= 20 and metrics["conversion_rate"] < 0.2:
+    if metrics["unique_visitors"] >= 10 and metrics["conversion_rate"] < 0.05:
+        anomalies.append(
+            {
+                "type": "CONVERSION_DROP",
+                "severity": "CRITICAL",
+                "suggested_action": "Escalate to store manager; inspect checkout staffing and POS friction immediately.",
+            }
+        )
+    elif metrics["unique_visitors"] >= 20 and metrics["conversion_rate"] < 0.2:
         anomalies.append(
             {
                 "type": "CONVERSION_DROP",
