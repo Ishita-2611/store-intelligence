@@ -36,8 +36,8 @@
       "detector_scale": 0.5,
       "min_motion_area": 1800,
       "zones": [
-        {"zone_id": "STORE_2_MAIN_FLOOR_A", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]},
-        {"zone_id": "STORE_2_MAIN_FLOOR_B", "polygon": [[960, 0], [1920, 0], [1920, 1080], [960, 1080]]}
+        {"zone_id": "STORE_2_LEFT_WALL_AND_GONDOLA", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]},
+        {"zone_id": "STORE_2_MAKEUP_UNITS_AND_RIGHT_WALL", "polygon": [[960, 0], [1920, 0], [1920, 1080], [960, 1080]]}
       ]
     },
     "BILLING_AREA": {
@@ -45,9 +45,9 @@
       "clip_start_utc": "2026-06-02T10:18:19Z",
       "detector_scale": 0.5,
       "min_motion_area": 1800,
-      "billing_zones": ["STORE_2_BILLING_QUEUE"],
+      "billing_zones": ["STORE_2_CASH_COUNTER_QUEUE"],
       "zones": [
-        {"zone_id": "STORE_2_BILLING_QUEUE", "polygon": [[0, 0], [1920, 0], [1920, 1080], [0, 1080]]}
+        {"zone_id": "STORE_2_CASH_COUNTER_QUEUE", "polygon": [[0, 0], [1920, 0], [1920, 1080], [0, 1080]]}
       ]
     }
   }
