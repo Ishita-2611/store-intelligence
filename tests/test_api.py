@@ -159,11 +159,13 @@ def test_request_logging_includes_trace_and_event_count(caplog) -> None:
 def test_dashboard_and_replay_status_are_available() -> None:
     dashboard = client.get("/dashboard")
     status = client.get("/demo/replay/status")
+    healthz = client.get("/healthz")
 
     assert dashboard.status_code == 200
     assert "Store Intelligence Command Center" in dashboard.text
     assert status.status_code == 200
     assert status.json()["running"] is False
+    assert healthz.json() == {"status": "ok"}
 
 
 def test_demo_replay_streams_events_from_jsonl(monkeypatch, tmp_path) -> None:

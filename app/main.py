@@ -82,6 +82,11 @@ def get_health() -> dict:
     return health_snapshot(store.all_events())
 
 
+@app.get("/healthz")
+def get_healthz() -> dict:
+    return {"status": "ok"}
+
+
 @app.post("/demo/replay/start")
 def start_demo_replay(batch_size: int = 25, interval_ms: int = 700) -> dict:
     upload_controller.reset()

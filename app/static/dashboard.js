@@ -1,4 +1,4 @@
-const storeId = "ST1076";
+const defaultStoreId = "ST1076";
 const numberFmt = new Intl.NumberFormat("en-IN");
 
 const els = {
@@ -80,14 +80,17 @@ els.uploadForm.addEventListener("submit", async (event) => {
 });
 
 async function refresh() {
-  const [health, replay, upload, metrics, funnel, heatmap, anomalies] = await Promise.all([
+  const [health, replay, upload] = await Promise.all([
     getJson("/health"),
     getJson("/demo/replay/status"),
     getJson("/uploads/cctv/latest"),
-    getJson(`/stores/${storeId}/metrics`),
-    getJson(`/stores/${storeId}/funnel`),
-    getJson(`/stores/${storeId}/heatmap`),
-    getJson(`/stores/${storeId}/anomalies`),
+  ]);
+  const activeStoreId = upload.store_id || defaultStoreId;
+  const [metrics, funnel, heatmap, anomalies] = await Promise.all([
+    getJson(`/stores/${activeStoreId}/metrics`),
+    getJson(`/stores/${activeStoreId}/funnel`),
+    getJson(`/stores/${activeStoreId}/heatmap`),
+    getJson(`/stores/${activeStoreId}/anomalies`),
   ]);
 
   renderHealth(health);

@@ -1,0 +1,54 @@
+{
+  "store_id": "STORE_2",
+  "store_name": "Store 2",
+  "city": "Unknown",
+  "business_date": "2026-06-02",
+  "cameras": {
+    "ENTRY_1": {
+      "camera_id": "STORE_2_ENTRY_1",
+      "clip_start_utc": "2026-06-02T10:18:19Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 1800,
+      "entry_zone": "STORE_2_ENTRY_THRESHOLD",
+      "entry_trigger_zones": ["STORE_2_ENTRY_THRESHOLD"],
+      "exit_zone": "STORE_2_EXIT_THRESHOLD",
+      "zones": [
+        {"zone_id": "STORE_2_ENTRY_THRESHOLD", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]},
+        {"zone_id": "STORE_2_EXIT_THRESHOLD", "polygon": [[960, 0], [1920, 0], [1920, 1080], [960, 1080]]}
+      ]
+    },
+    "ENTRY_2": {
+      "camera_id": "STORE_2_ENTRY_2",
+      "clip_start_utc": "2026-06-02T10:18:19Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 1800,
+      "entry_zone": "STORE_2_ENTRY_THRESHOLD",
+      "entry_trigger_zones": ["STORE_2_ENTRY_THRESHOLD"],
+      "exit_zone": "STORE_2_EXIT_THRESHOLD",
+      "zones": [
+        {"zone_id": "STORE_2_ENTRY_THRESHOLD", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]},
+        {"zone_id": "STORE_2_EXIT_THRESHOLD", "polygon": [[960, 0], [1920, 0], [1920, 1080], [960, 1080]]}
+      ]
+    },
+    "ZONE": {
+      "camera_id": "STORE_2_ZONE",
+      "clip_start_utc": "2026-06-02T10:18:19Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 1800,
+      "zones": [
+        {"zone_id": "STORE_2_MAIN_FLOOR_A", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]},
+        {"zone_id": "STORE_2_MAIN_FLOOR_B", "polygon": [[960, 0], [1920, 0], [1920, 1080], [960, 1080]]}
+      ]
+    },
+    "BILLING_AREA": {
+      "camera_id": "STORE_2_BILLING_AREA",
+      "clip_start_utc": "2026-06-02T10:18:19Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 1800,
+      "billing_zones": ["STORE_2_BILLING_QUEUE"],
+      "zones": [
+        {"zone_id": "STORE_2_BILLING_QUEUE", "polygon": [[0, 0], [1920, 0], [1920, 1080], [0, 1080]]}
+      ]
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "store_id": "STORE_1",
+  "store_name": "Store 1",
+  "city": "Unknown",
+  "business_date": "2026-06-02",
+  "cameras": {
+    "CAM_1_ZONE": {
+      "camera_id": "STORE_1_CAM_1_ZONE",
+      "clip_start_utc": "2026-06-02T10:18:18Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 2200,
+      "zones": [
+        {"zone_id": "STORE_1_ZONE_A", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]},
+        {"zone_id": "STORE_1_ZONE_B", "polygon": [[960, 0], [1920, 0], [1920, 1080], [960, 1080]]}
+      ]
+    },
+    "CAM_2_ZONE": {
+      "camera_id": "STORE_1_CAM_2_ZONE",
+      "clip_start_utc": "2026-06-02T10:18:18Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 2200,
+      "zones": [
+        {"zone_id": "STORE_1_ZONE_C", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]},
+        {"zone_id": "STORE_1_ZONE_D", "polygon": [[960, 0], [1920, 0], [1920, 1080], [960, 1080]]}
+      ]
+    },
+    "CAM_3_ENTRY": {
+      "camera_id": "STORE_1_CAM_3_ENTRY",
+      "clip_start_utc": "2026-06-02T10:18:18Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 2200,
+      "entry_zone": "STORE_1_ENTRY_THRESHOLD",
+      "entry_trigger_zones": ["STORE_1_ENTRY_THRESHOLD"],
+      "exit_zone": "STORE_1_EXIT_THRESHOLD",
+      "zones": [
+        {"zone_id": "STORE_1_ENTRY_THRESHOLD", "polygon": [[0, 0], [960, 0], [960, 1080], [0, 1080]]},
+        {"zone_id": "STORE_1_EXIT_THRESHOLD", "polygon": [[960, 0], [1920, 0], [1920, 1080], [960, 1080]]}
+      ]
+    },
+    "CAM_5_BILLING": {
+      "camera_id": "STORE_1_CAM_5_BILLING",
+      "clip_start_utc": "2026-06-02T10:18:18Z",
+      "detector_scale": 0.5,
+      "min_motion_area": 2200,
+      "billing_zones": ["STORE_1_BILLING_QUEUE"],
+      "zones": [
+        {"zone_id": "STORE_1_BILLING_QUEUE", "polygon": [[0, 0], [1920, 0], [1920, 1080], [0, 1080]]}
+      ]
+    }
+  }
+}

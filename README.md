@@ -6,21 +6,24 @@ This repository is configured around the latest provided challenge resources:
 - `data/sample_events.jsonl` is the normalized default replay stream derived from that provided sample event file.
 - `data/pos_transactions.csv` is the supplied POS transaction resource.
 - `data/store_layout.json` is an inferred `ST1076` layout based on the cameras and zones present in the new sample events.
+- `data/store_layouts/store_1.json` and `data/store_layouts/store_2.json` map the actual Store 1 and Store 2 CCTV zip camera names to detector zones.
 - The supplied POS rows are for `ST1008`, while the supplied sample-event stream is for `ST1076`. The API and parser support both files, but the default live demo uses the `ST1076` event stream as the authoritative dataset because there is no matching `ST1076` POS file in the provided resources.
 
 ## Part A: Detection Pipeline
 
-Run the detector when raw CCTV clips and a matching layout are available:
+Run the detector against the provided Store 1 or Store 2 CCTV zip:
 
 ```powershell
-python -m pipeline.detect --video-zip "<path-to-cctv.zip>" --layout data\store_layout.json --pos-csv data\pos_transactions.csv --out outputs\detected_events.jsonl
+python -m pipeline.detect --video-zip "D:\downloads\Store 2-20260602T101819Z-3-001099f208.zip" --pos-csv data\pos_transactions.csv --out outputs\detected_events.jsonl
 ```
 
 For a quick smoke run:
 
 ```powershell
-python -m pipeline.detect --video-zip "<path-to-cctv.zip>" --layout data\store_layout.json --pos-csv data\pos_transactions.csv --out outputs\detected_events_sample.jsonl --max-seconds 15
+python -m pipeline.detect --video-zip "D:\downloads\Store 2-20260602T101819Z-3-001099f208.zip" --pos-csv data\pos_transactions.csv --out outputs\detected_events_sample.jsonl --sample-stride 45 --max-seconds 3
 ```
+
+When the zip contains `Store 1/` or `Store 2/`, the detector automatically selects the matching layout from `data/store_layouts/`. Large CCTV zip files are not committed to Git; keep them in the provided download location and pass their local path to the command.
 
 The event stream is newline-delimited JSON and follows the challenge schema:
 
@@ -115,7 +118,7 @@ The dashboard is served by the same FastAPI app:
 http://127.0.0.1:8000/dashboard
 ```
 
-The primary reviewer demo is `Replay sample`, which streams the new `ST1076` sample-event resource into the API in simulated real time. CCTV upload remains available for raw clips when a complete video resource is present.
+The primary reviewer demo is `Replay sample`, which streams the new `ST1076` sample-event resource into the API in simulated real time. CCTV upload also supports the provided Store 1 and Store 2 zips; uploaded events report `STORE_1` or `STORE_2`, and the dashboard switches analytics to that uploaded store automatically.
 
 Run tests:
 

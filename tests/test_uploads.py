@@ -14,6 +14,7 @@ from app.uploads import (
     upload_controller,
     write_precomputed_events_for_upload,
 )
+from pipeline.layouts import camera_key_for_name, layout_path_for_zip
 
 
 client = TestClient(app)
@@ -53,6 +54,20 @@ def test_mp4_upload_is_wrapped_for_detector(tmp_path) -> None:
     assert zip_path.suffix == ".zip"
     with zipfile.ZipFile(zip_path) as archive:
         assert archive.namelist() == ["CCTV Footage/clip.mp4"]
+
+
+def test_store_zip_layouts_are_detected_from_archive_members(tmp_path) -> None:
+    store_1_zip = tmp_path / "store-1.zip"
+    with zipfile.ZipFile(store_1_zip, "w") as archive:
+        archive.writestr("Store 1/CAM 5 - billing.mp4", b"fake-video")
+    store_2_zip = tmp_path / "store-2.zip"
+    with zipfile.ZipFile(store_2_zip, "w") as archive:
+        archive.writestr("Store 2/billing_area.mp4", b"fake-video")
+
+    assert camera_key_for_name("CAM 5 - billing.mp4") == "CAM_5_BILLING"
+    assert layout_path_for_zip(store_1_zip).name == "store_1.json"
+    assert layout_path_for_zip(store_2_zip).name == "store_2.json"
+    assert camera_id_for_filename("CAM 5 - billing.mp4") == "STORE_1_CAM_5_BILLING"
 
 
 def test_upload_rejects_unsupported_file_type(tmp_path) -> None:
@@ -104,6 +119,25 @@ def test_uploaded_detector_uses_bounded_analysis_window(monkeypatch, tmp_path) -
     assert captured["generation"] == generation
     assert upload_controller.status("bounded")["status"] == "completed"
     assert upload_controller.status("bounded")["analysis_window_seconds"] == 60.0
+
+
+def test_store_upload_status_reports_selected_store(monkeypatch, tmp_path) -> None:
+    source_zip = tmp_path / "store-1.zip"
+    with zipfile.ZipFile(source_zip, "w") as archive:
+        archive.writestr("Store 1/CAM 3 - entry.mp4", b"fake-video")
+    monkeypatch.setattr(uploads, "UPLOAD_USE_SAMPLE_EVENTS", False)
+
+    def fake_run_detector(_zip_path, events_path, _controller, _job_id, _generation):
+        events_path.write_text("", encoding="utf-8")
+
+    monkeypatch.setattr(uploads, "run_detector", fake_run_detector)
+    with upload_controller._lock:
+        upload_controller._jobs["store1"] = UploadJob(job_id="store1", filename="store-1.zip")
+        generation = upload_controller._generation
+
+    upload_controller._process("store1", source_zip, generation)
+
+    assert upload_controller.status("store1")["store_id"] == "STORE_1"
 
 
 def test_uploaded_files_run_detector_by_default(tmp_path) -> None:

@@ -13,11 +13,10 @@ import cv2
 import numpy as np
 
 from .emit import JsonlEventWriter, StoreEvent, iso_from_epoch
+from .layouts import DEFAULT_LAYOUT, camera_key_for_name, layout_path_for_zip
 from .tracker import BBox, CentroidTracker, Track
 from .zones import containing_zones
 
-
-DEFAULT_LAYOUT = Path("data/store_layout.json")
 DEFAULT_OUT = Path("outputs/detected_events.jsonl")
 
 
@@ -34,7 +33,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    layout = json.loads(Path(args.layout).read_text(encoding="utf-8"))
+    layout_path = layout_path_for_zip(args.video_zip, args.layout) if args.layout == str(DEFAULT_LAYOUT) else Path(args.layout)
+    layout = json.loads(layout_path.read_text(encoding="utf-8"))
     store_id = layout["store_id"]
     pos_times = load_pos_times(args.pos_csv) if args.pos_csv else {}
 
@@ -45,7 +45,7 @@ def main() -> None:
             for member in sorted(members):
                 target = tmpdir_path / Path(member).name
                 target.write_bytes(archive.read(member))
-                camera_key = target.stem.upper().replace(" ", "_")
+                camera_key = camera_key_for_name(target.name)
                 camera_cfg = layout["cameras"].get(camera_key, {})
                 camera_id = camera_cfg.get("camera_id", camera_key)
                 clip_start = _parse_clip_start(camera_cfg.get("clip_start_utc"))

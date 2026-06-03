@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import UploadFile
 
 from .ingestion import store
+from pipeline.layouts import camera_key_for_name, layout_path_for_zip
 
 
 UPLOAD_DIR = Path("outputs/uploads")
@@ -30,6 +31,7 @@ UPLOAD_USE_SAMPLE_EVENTS = os.getenv("UPLOAD_USE_SAMPLE_EVENTS", "false").lower(
 class UploadJob:
     job_id: str
     filename: str
+    store_id: str | None = None
     status: str = "queued"
     accepted_events: int = 0
     rejected_events: int = 0
@@ -77,6 +79,7 @@ class UploadController:
             self._update(
                 job_id,
                 status="completed",
+                store_id="ST1076",
                 accepted_events=accepted,
                 rejected_events=rejected,
                 completed_at=_now(),
@@ -116,6 +119,9 @@ class UploadController:
         events_path = UPLOAD_DIR / f"{job_id}-events.jsonl"
         try:
             zip_path = ensure_zip(source_path)
+            selected_layout = layout_path_for_zip(zip_path, LAYOUT_PATH)
+            layout = json.loads(selected_layout.read_text(encoding="utf-8"))
+            self._update(job_id, store_id=layout["store_id"])
             if self._is_cancelled(job_id, generation):
                 return
             if should_use_precomputed_events(source_path, zip_path):
@@ -190,13 +196,17 @@ def write_precomputed_events_for_upload(filename: str, events_path: Path) -> Non
 
 
 def camera_id_for_filename(filename: str) -> str | None:
-    stem = Path(filename).stem.upper().replace(" ", "_")
-    layout = json.loads(LAYOUT_PATH.read_text(encoding="utf-8"))
-    cameras = layout.get("cameras", {})
-    camera_cfg = cameras.get(stem) or cameras.get(stem.replace("_", ""))
-    if not camera_cfg:
-        return None
-    return camera_cfg.get("camera_id", stem)
+    stem = camera_key_for_name(filename)
+    layout_paths = [LAYOUT_PATH, Path("data/store_layouts/store_1.json"), Path("data/store_layouts/store_2.json")]
+    for layout_path in layout_paths:
+        if not layout_path.exists():
+            continue
+        layout = json.loads(layout_path.read_text(encoding="utf-8"))
+        cameras = layout.get("cameras", {})
+        camera_cfg = cameras.get(stem) or cameras.get(stem.replace("_", ""))
+        if camera_cfg:
+            return camera_cfg.get("camera_id", stem)
+    return None
 
 
 def _now() -> str:
@@ -210,7 +220,8 @@ def run_detector(zip_path: Path, events_path: Path, controller: UploadController
     from pipeline.detect import process_video
     from pipeline.emit import JsonlEventWriter
 
-    layout = json.loads(LAYOUT_PATH.read_text(encoding="utf-8"))
+    selected_layout = layout_path_for_zip(zip_path, LAYOUT_PATH)
+    layout = json.loads(selected_layout.read_text(encoding="utf-8"))
     store_id = layout["store_id"]
     with tempfile.TemporaryDirectory() as tmpdir, JsonlEventWriter(events_path) as writer:
         tmpdir_path = Path(tmpdir)
@@ -223,7 +234,7 @@ def run_detector(zip_path: Path, events_path: Path, controller: UploadController
                     return
                 target = tmpdir_path / Path(member).name
                 target.write_bytes(archive.read(member))
-                camera_key = target.stem.upper().replace(" ", "_")
+                camera_key = camera_key_for_name(target.name)
                 camera_cfg = layout["cameras"].get(camera_key, {})
                 process_video(
                     target,
