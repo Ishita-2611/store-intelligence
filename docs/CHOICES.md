@@ -8,6 +8,8 @@ The main reason was reproducibility. The local environment did not already inclu
 
 The trade-off is accuracy. HOG and motion detection are not as robust as a modern detector, especially with crowded billing, partial occlusion, and unusual camera angles. To reduce that gap without risking deployment, I added optional YOLOv8 support behind a lazy import: local users can install `requirements-ml.txt`, and `detect_people()` will use YOLO person boxes before falling back to HOG and motion. The Render/API image still uses the lightweight requirements file so the public demo does not fail on a heavyweight Torch install. The code keeps `detect_people()` isolated, so RT-DETR or another detector can replace it without changing tracking, event emission, ingest, or metrics.
 
+The YOLO loader is cached with `lru_cache(maxsize=2)` by model name, so two different store layouts can keep separate models warm at the same time; if a third model is requested, the least recently used model is evicted and loaded again only when needed.
+
 For staff detection, I considered uniform classification from visual appearance. I chose a simpler zone-based approach for this iteration: people seen in back-of-house or staff stock zones are flagged as staff. A VLM could help classify uniforms in ambiguous frames, but using one would introduce latency, cost, and privacy questions. The current method is explainable and deterministic, even though it can miss staff who never enter a staff-only area.
 
 ## 2. Event Schema Design

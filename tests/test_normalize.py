@@ -1,7 +1,7 @@
 # PROMPT: Add tests for compatibility normalization from the provided sample_events JSONL shapes into the canonical API schema.
 # CHANGES MADE: Covered entry, zone, queue, canonical pass-through, and unknown-event fallback cases without depending on the full sample file.
 
-from app.normalize import normalize_event
+from app.normalize import normalize_event, normalize_store_id
 
 
 def test_normalizes_entry_event_from_store_code_shape() -> None:
@@ -78,3 +78,9 @@ def test_preserves_named_store_ids_from_acceptance_gate() -> None:
     )
 
     assert normalized["store_id"] == "STORE_BLR_002"
+
+
+def test_store_blr_id_is_preserved_and_numeric_store_id_is_normalized() -> None:
+    assert normalize_store_id("STORE_BLR_002") == "STORE_BLR_002"
+    assert normalize_store_id("store_1076") == "ST1076"
+    assert normalize_store_id("STORE_MUM_042") == "STORE_MUM_042"

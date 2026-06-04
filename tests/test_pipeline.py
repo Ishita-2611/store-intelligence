@@ -156,6 +156,8 @@ def test_process_video_runs_with_mocked_capture(tmp_path, monkeypatch) -> None:
 
 
 def test_yolo_detector_path_is_used_when_available(monkeypatch) -> None:
+    detect._load_yolo_model.cache_clear()
+
     class FakeTensor:
         def __init__(self, values):
             self.values = values
