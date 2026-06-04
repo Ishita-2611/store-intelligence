@@ -15,14 +15,15 @@ from typing import Any
 from fastapi import UploadFile
 
 from .ingestion import store
+from pipeline.detect import extract_zip_member
 from pipeline.layouts import camera_key_for_name, layout_path_for_zip
 
 
 UPLOAD_DIR = Path("outputs/uploads")
 LAYOUT_PATH = Path("data/store_layout.json")
 DEMO_EVENTS_PATH = Path("data/sample_events.jsonl")
-UPLOAD_SAMPLE_STRIDE = int(os.getenv("UPLOAD_SAMPLE_STRIDE", "20"))
-UPLOAD_MAX_SECONDS = float(os.getenv("UPLOAD_MAX_SECONDS", "60"))
+UPLOAD_SAMPLE_STRIDE = int(os.getenv("UPLOAD_SAMPLE_STRIDE", "45"))
+UPLOAD_MAX_SECONDS = float(os.getenv("UPLOAD_MAX_SECONDS", "5"))
 UPLOAD_DIRECT_DETECT_MAX_BYTES = int(os.getenv("UPLOAD_DIRECT_DETECT_MAX_BYTES", str(25 * 1024 * 1024)))
 UPLOAD_USE_SAMPLE_EVENTS = os.getenv("UPLOAD_USE_SAMPLE_EVENTS", "false").lower() in {"1", "true", "yes"}
 
@@ -40,6 +41,9 @@ class UploadJob:
     error: str | None = None
     events_path: str | None = None
     analysis_window_seconds: float = UPLOAD_MAX_SECONDS
+    total_cameras: int = 0
+    processed_cameras: int = 0
+    current_camera: str | None = None
 
 
 class UploadController:
@@ -229,11 +233,13 @@ def run_detector(zip_path: Path, events_path: Path, controller: UploadController
             members = [member for member in archive.namelist() if member.lower().endswith(".mp4")]
             if not members:
                 raise ValueError("No MP4 files were found in the uploaded ZIP.")
+            controller._update(job_id, total_cameras=len(members), processed_cameras=0)
             for member in sorted(members):
                 if controller._is_cancelled(job_id, generation):
                     return
+                controller._update(job_id, current_camera=Path(member).name)
                 target = tmpdir_path / Path(member).name
-                target.write_bytes(archive.read(member))
+                extract_zip_member(archive, member, target)
                 camera_key = camera_key_for_name(target.name)
                 camera_cfg = layout["cameras"].get(camera_key, {})
                 process_video(
@@ -247,6 +253,9 @@ def run_detector(zip_path: Path, events_path: Path, controller: UploadController
                     UPLOAD_SAMPLE_STRIDE,
                     UPLOAD_MAX_SECONDS,
                 )
+                status = controller.status(job_id) or {}
+                controller._update(job_id, processed_cameras=int(status.get("processed_cameras", 0)) + 1)
+            controller._update(job_id, current_camera=None)
 
 
 def _clip_start(value: str | None) -> float:

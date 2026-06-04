@@ -286,7 +286,10 @@ function uploadDetail(upload) {
   if (upload.status === "queued") return "Queued for analysis.";
   if (upload.status === "processing") {
     const windowSeconds = upload.analysis_window_seconds || 60;
-    return `Analyzing the uploaded footage with the detector. Results depend on visible people, camera naming, and zone coverage.`;
+    const cameraProgress = upload.total_cameras
+      ? ` Camera ${upload.processed_cameras || 0}/${upload.total_cameras}${upload.current_camera ? `: ${upload.current_camera}` : ""}.`
+      : "";
+    return `Analyzing a ${windowSeconds}s quick window per camera with the detector.${cameraProgress} Results depend on visible people, camera naming, and zone coverage.`;
   }
   if (upload.status === "completed") {
     if (!upload.accepted_events) {

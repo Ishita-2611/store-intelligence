@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import os
+import shutil
 import tempfile
 import zipfile
 from datetime import datetime, timedelta, timezone
@@ -46,7 +47,7 @@ def main() -> None:
             members = [m for m in archive.namelist() if m.lower().endswith(".mp4")]
             for member in sorted(members):
                 target = tmpdir_path / Path(member).name
-                target.write_bytes(archive.read(member))
+                extract_zip_member(archive, member, target)
                 camera_key = camera_key_for_name(target.name)
                 camera_cfg = layout["cameras"].get(camera_key, {})
                 camera_id = camera_cfg.get("camera_id", camera_key)
@@ -341,6 +342,11 @@ def non_max_suppression(detections: list[tuple[BBox, float]], overlap_threshold:
 def _rescale_bbox(bbox: BBox, factor: float) -> BBox:
     x, y, w, h = bbox
     return int(x * factor), int(y * factor), int(w * factor), int(h * factor)
+
+
+def extract_zip_member(archive: zipfile.ZipFile, member: str, target: Path) -> None:
+    with archive.open(member) as source, target.open("wb") as destination:
+        shutil.copyfileobj(source, destination, length=64 * 1024)
 
 
 def _parse_clip_start(value: str | None) -> float:

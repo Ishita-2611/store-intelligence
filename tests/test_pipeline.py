@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 from pipeline import detect
-from pipeline.detect import events_for_tracks, has_pos_after, load_pos_times, non_max_suppression, process_video
+from pipeline.detect import events_for_tracks, extract_zip_member, has_pos_after, load_pos_times, non_max_suppression, process_video
 from pipeline.emit import JsonlEventWriter
 from pipeline.layouts import camera_key_for_name, layout_path_for_zip
 from pipeline.tracker import Track
@@ -28,6 +28,18 @@ def test_camera_key_and_layout_selection_for_provided_store_zips(tmp_path) -> No
     assert camera_key_for_name("billing_area.mp4") == "BILLING_AREA"
     assert layout_path_for_zip(store_1_zip).name == "store_1.json"
     assert layout_path_for_zip(store_2_zip).name == "store_2.json"
+
+
+def test_extract_zip_member_streams_to_target(tmp_path) -> None:
+    source_zip = tmp_path / "source.zip"
+    with zipfile.ZipFile(source_zip, "w") as archive:
+        archive.writestr("CCTV Footage/CAM 1 - zone.mp4", b"video-bytes")
+
+    target = tmp_path / "cam1.mp4"
+    with zipfile.ZipFile(source_zip) as archive:
+        extract_zip_member(archive, "CCTV Footage/CAM 1 - zone.mp4", target)
+
+    assert target.read_bytes() == b"video-bytes"
 
 
 def test_zone_helpers_and_non_max_suppression() -> None:
@@ -120,7 +132,7 @@ def test_secondary_entry_camera_can_be_observation_only() -> None:
 
 
 def test_process_video_runs_with_mocked_capture(tmp_path, monkeypatch) -> None:
-    frames = [np.zeros((480, 640, 3), dtype=np.uint8) for _ in range(18)]
+    frames = [np.zeros((120, 160, 3), dtype=np.uint8) for _ in range(18)]
     frame_iter = iter(frames)
 
     class FakeCapture:
@@ -142,11 +154,13 @@ def test_process_video_runs_with_mocked_capture(tmp_path, monkeypatch) -> None:
             return None
 
     monkeypatch.setattr(cv2, "VideoCapture", lambda *_args, **_kwargs: FakeCapture())
+    monkeypatch.setattr(detect, "_hog_detections", lambda *_args, **_kwargs: ([], []))
+    monkeypatch.setattr(detect, "_motion_detections", lambda *_args, **_kwargs: [])
 
     out = tmp_path / "events.jsonl"
     camera_cfg = {
         "entry_zone": None,
-        "zones": [{"zone_id": "Z1", "polygon": [[0, 0], [640, 0], [640, 480], [0, 480]]}],
+        "zones": [{"zone_id": "Z1", "polygon": [[0, 0], [160, 0], [160, 120], [0, 120]]}],
     }
     with JsonlEventWriter(out) as writer:
         process_video(tmp_path / "fake.mp4", "ST_TEST", "CAM1", camera_cfg, 1_700_000_000.0, [], writer, 6, 2.0)

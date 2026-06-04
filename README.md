@@ -127,7 +127,7 @@ The dashboard is served by the same FastAPI app:
 http://127.0.0.1:8000/dashboard
 ```
 
-The primary reviewer demo is `Replay sample`, which streams the new `ST1076` sample-event resource into the API in simulated real time. CCTV upload also supports the provided Store 1 and Store 2 zips; uploaded events report `STORE_1` or `STORE_2`, and the dashboard switches analytics to that uploaded store automatically.
+The primary reviewer demo is `Replay sample`, which streams the new `ST1076` sample-event resource into the API in simulated real time. CCTV upload also supports the provided Store 1 and Store 2 zips; uploaded events report `STORE_1` or `STORE_2`, and the dashboard switches analytics to that uploaded store automatically. Hosted uploads run a short default smoke window of 5 seconds per camera with stride 45 so Render can finish quickly; set `UPLOAD_MAX_SECONDS` and `UPLOAD_SAMPLE_STRIDE` for deeper local analysis.
 
 Run tests:
 
