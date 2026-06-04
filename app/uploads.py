@@ -19,7 +19,7 @@ from pipeline.detect import extract_zip_member
 from pipeline.layouts import camera_key_for_name, layout_path_for_zip
 
 
-UPLOAD_DIR = Path("outputs/uploads")
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "outputs/uploads"))
 LAYOUT_PATH = Path("data/store_layout.json")
 DEMO_EVENTS_PATH = Path("data/sample_events.jsonl")
 UPLOAD_SAMPLE_STRIDE = int(os.getenv("UPLOAD_SAMPLE_STRIDE", "45"))

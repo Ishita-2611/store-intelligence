@@ -104,6 +104,20 @@ def test_funnel_heatmap_anomalies_and_health() -> None:
     assert health["stores"]["ST1076"]["warning"] == "STALE_FEED"
 
 
+def test_heatmap_handles_zero_dwell_zone_visits() -> None:
+    client.post(
+        "/events/ingest",
+        json={"events": [event("zero-dwell-1", "VIS_1", "ZONE_ENTER", "2026-04-10T10:01:00Z", "STORE_2_ENTRY_THRESHOLD")]},
+    )
+
+    response = client.get("/stores/ST1076/heatmap")
+
+    assert response.status_code == 200
+    zone = response.json()["zones"][0]
+    assert zone["zone_id"] == "STORE_2_ENTRY_THRESHOLD"
+    assert zone["heat_score"] == 70.0
+
+
 def test_critical_anomaly_severity_for_deep_queue() -> None:
     queue_events = [
         event(f"q{i}", f"VIS_{i}", "BILLING_QUEUE_JOIN", f"2026-04-10T10:{i:02d}:00Z", "PURPLLE_MUM_1076_Z_BILLING_01", queue_depth=i)

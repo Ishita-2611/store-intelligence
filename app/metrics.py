@@ -77,6 +77,8 @@ def compute_heatmap(events: list[StoreEvent]) -> dict:
 
     max_visits = max((len(value) for value in visits.values()), default=1)
     max_dwell = max((dwell_totals[zone] / max(dwell_counts[zone], 1) for zone in visits), default=1)
+    if max_dwell <= 0:
+        max_dwell = 1
     sessions = len(session_sets(events)["entries"])
     zones = []
     for zone_id in sorted(visits):
