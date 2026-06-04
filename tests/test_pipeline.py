@@ -171,6 +171,7 @@ def test_process_video_runs_with_mocked_capture(tmp_path, monkeypatch) -> None:
 
 def test_yolo_detector_path_is_used_when_available(monkeypatch) -> None:
     detect._load_yolo_model.cache_clear()
+    captured = {}
 
     class FakeTensor:
         def __init__(self, values):
@@ -190,12 +191,55 @@ def test_yolo_detector_path_is_used_when_available(monkeypatch) -> None:
         boxes = [FakeBox()]
 
     class FakeModel:
-        def predict(self, *_args, **_kwargs):
+        def predict(self, *_args, **kwargs):
+            captured.update(kwargs)
             return [FakeResult()]
 
     monkeypatch.setattr(detect, "_load_yolo_model", lambda _model_name: FakeModel())
 
     frame = np.zeros((240, 320, 3), dtype=np.uint8)
-    detections = detect._yolo_detections(frame, 0.5, {"yolo_model": "fake.pt"})
+    detections = detect._yolo_detections(frame, 0.5, {"yolo_model": "fake.pt", "yolo_device": "cpu", "yolo_min_confidence": 0.4})
 
     assert detections == [((20, 40, 100, 200), 0.88)]
+    assert captured["classes"] == [0]
+    assert captured["conf"] == 0.4
+    assert captured["device"] == "cpu"
+
+
+def test_forced_yolo_raises_when_model_is_unavailable(monkeypatch) -> None:
+    monkeypatch.setattr(detect, "_load_yolo_model", lambda _model_name: None)
+
+    frame = np.zeros((240, 320, 3), dtype=np.uint8)
+
+    try:
+        detect._yolo_detections(frame, 0.5, {"yolo_model": "missing.pt"}, required=True)
+    except RuntimeError as exc:
+        assert "YOLO detector requested" in str(exc)
+    else:
+        raise AssertionError("Expected forced YOLO mode to fail when no YOLO model is available")
+
+
+def test_opencv_detector_mode_skips_yolo(monkeypatch) -> None:
+    calls = {"yolo": 0, "hog": 0, "motion": 0}
+
+    def fake_yolo(*_args, **_kwargs):
+        calls["yolo"] += 1
+        return [((1, 2, 3, 4), 0.9)]
+
+    def fake_hog(*_args, **_kwargs):
+        calls["hog"] += 1
+        return [], []
+
+    def fake_motion(*_args, **_kwargs):
+        calls["motion"] += 1
+        return [((10, 20, 30, 80), 0.5)]
+
+    monkeypatch.setattr(detect, "_yolo_detections", fake_yolo)
+    monkeypatch.setattr(detect, "_hog_detections", fake_hog)
+    monkeypatch.setattr(detect, "_motion_detections", fake_motion)
+
+    frame = np.zeros((240, 320, 3), dtype=np.uint8)
+    detections = detect.detect_people(frame, cv2.createBackgroundSubtractorMOG2(), cv2.HOGDescriptor(), {"detector": "opencv"})
+
+    assert calls == {"yolo": 0, "hog": 1, "motion": 1}
+    assert detections == [((10, 20, 30, 80), 0.5)]
