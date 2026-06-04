@@ -72,3 +72,42 @@ def test_first_billing_visitor_gets_queue_join_event() -> None:
 
     assert [event.event_type for event in events] == ["BILLING_QUEUE_JOIN"]
     assert events[0].metadata["queue_depth"] == 1
+
+
+def test_billing_abandon_requires_pos_reference_data() -> None:
+    track = Track(
+        track_id=1,
+        visitor_id="VIS_1",
+        bbox=(150, 10, 20, 40),
+        confidence=0.9,
+        first_seen_ms=0,
+        last_seen_ms=0,
+        zones={"BILLING"},
+        dwell_started_ms={"BILLING": 0},
+    )
+    camera_cfg = {"billing_zones": ["BILLING"], "zones": [{"zone_id": "BILLING", "polygon": [[0, 0], [100, 0], [100, 100], [0, 100]]}]}
+
+    events = events_for_tracks("STORE_TEST", "CAM_BILLING", camera_cfg, camera_cfg["zones"], [track], "2026-06-02T10:00:00Z", 60_000, [])
+
+    assert [event.event_type for event in events] == ["ZONE_EXIT"]
+
+
+def test_secondary_entry_camera_can_be_observation_only() -> None:
+    track = Track(
+        track_id=1,
+        visitor_id="VIS_1",
+        bbox=(10, 10, 20, 40),
+        confidence=0.9,
+        first_seen_ms=0,
+        last_seen_ms=0,
+    )
+    camera_cfg = {
+        "emit_entry_events": False,
+        "entry_zone": "ENTRY",
+        "entry_trigger_zones": ["ENTRY"],
+        "zones": [{"zone_id": "ENTRY", "polygon": [[0, 0], [100, 0], [100, 100], [0, 100]]}],
+    }
+
+    events = events_for_tracks("STORE_TEST", "CAM_ENTRY_2", camera_cfg, camera_cfg["zones"], [track], "2026-06-02T10:00:00Z", 1000, [])
+
+    assert [event.event_type for event in events] == ["ZONE_ENTER"]

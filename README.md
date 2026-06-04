@@ -23,14 +23,14 @@ For a quick smoke run:
 python -m pipeline.detect --video-zip "D:\downloads\Store 2-20260602T101819Z-3-001099f208.zip" --pos-csv data\pos_transactions.csv --out outputs\detected_events_sample.jsonl --sample-stride 45 --max-seconds 3
 ```
 
-When the zip contains `Store 1/` or `Store 2/`, the detector automatically selects the matching layout from `data/store_layouts/`. Large CCTV zip files are not committed to Git; keep them in the provided download location and pass their local path to the command.
+When the zip contains `Store 1/` or `Store 2/`, the detector automatically selects the matching layout from `data/store_layouts/`. Store 2 has two entry cameras, so `ENTRY_1` is the authoritative customer-count camera and `ENTRY_2` contributes zone observation without double-counting visitor entries. Large CCTV zip files are not committed to Git; keep them in the provided download location and pass their local path to the command.
 
 The event stream is newline-delimited JSON and follows the challenge schema:
 
 - `ENTRY`, `EXIT`, and `REENTRY` from entry/exit cameras.
 - `ZONE_ENTER`, `ZONE_EXIT`, and periodic `ZONE_DWELL`.
 - `BILLING_QUEUE_JOIN` when a tracked visitor enters the billing zone.
-- `BILLING_QUEUE_ABANDON` when a visitor leaves billing and no matching POS transaction follows.
+- `BILLING_QUEUE_ABANDON` when a visitor leaves billing and no matching POS transaction follows; if no POS reference data exists for that store, the pipeline does not guess abandonment.
 - `is_staff=true` for tracks observed in staff or non-customer areas.
 
 The API also accepts the provided sample-event compatibility format (`id_token`, `store_code`, `event_timestamp`, `zone_entered`, `queue_completed`, etc.) and normalizes it into the canonical schema during ingest. The committed `data/provided_sample_events.jsonl` file exercises that path.
@@ -57,6 +57,7 @@ Implemented endpoints:
 - `GET /stores/{store_id}/heatmap` returns zone frequency, average dwell, normalized heat score, and data-confidence status.
 - `GET /stores/{store_id}/anomalies` returns queue, conversion, dead-zone, or no-traffic signals with suggested actions.
 - `GET /health` returns latest event timestamps per store and stale-feed warnings.
+- `GET /healthz` returns a lightweight deployment health check for Render and Docker health probes.
 
 Load the default provided sample events into a running API:
 
@@ -86,7 +87,7 @@ Five-command local setup:
 git clone https://github.com/Ishita-2611/store-intelligence.git
 cd store-intelligence
 pip install -r requirements.txt
-python -m pytest --cov=app --cov=pipeline --cov-report=term-missing tests
+python -m pytest
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -123,5 +124,5 @@ The primary reviewer demo is `Replay sample`, which streams the new `ST1076` sam
 Run tests:
 
 ```powershell
-python -m pytest tests -q
+python -m pytest
 ```

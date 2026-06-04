@@ -144,6 +144,7 @@ def events_for_tracks(
     entry_zone = camera_cfg.get("entry_zone")
     entry_trigger_zones = set(camera_cfg.get("entry_trigger_zones", [entry_zone] if entry_zone else []))
     exit_zone = camera_cfg.get("exit_zone")
+    emit_entry_events = bool(camera_cfg.get("emit_entry_events", True))
 
     active_queue_depth = sum(1 for track in tracks if billing_zones & track.zones)
 
@@ -153,13 +154,13 @@ def events_for_tracks(
         entered = current_zones - track.zones
         exited = track.zones - current_zones
 
-        if entry_trigger_zones & current_zones and not track.entry_reported and not track.exited:
+        if emit_entry_events and entry_trigger_zones & current_zones and not track.entry_reported and not track.exited:
             track.entry_reported = True
             events.append(_event(store_id, camera_id, track, "ENTRY", timestamp, None, 0, None))
-        if exit_zone and exit_zone in current_zones and track.entry_reported and not track.exited:
+        if emit_entry_events and exit_zone and exit_zone in current_zones and track.entry_reported and not track.exited:
             track.exited = True
             events.append(_event(store_id, camera_id, track, "EXIT", timestamp, None, 0, None))
-        if entry_zone and entry_zone in entered and track.exited:
+        if emit_entry_events and entry_zone and entry_zone in entered and track.exited:
             events.append(_event(store_id, camera_id, track, "REENTRY", timestamp, None, 0, None))
             track.exited = False
 
@@ -174,7 +175,7 @@ def events_for_tracks(
         for zone_id in sorted(exited):
             dwell_ms = max(0, frame_ms - track.dwell_started_ms.get(zone_id, frame_ms))
             events.append(_event(store_id, camera_id, track, "ZONE_EXIT", timestamp, zone_id, dwell_ms, None))
-            if zone_id in billing_zones and not has_pos_after(timestamp, store_pos_times):
+            if zone_id in billing_zones and store_pos_times and not has_pos_after(timestamp, store_pos_times):
                 events.append(_event(store_id, camera_id, track, "BILLING_QUEUE_ABANDON", timestamp, zone_id, dwell_ms, max(active_queue_depth - 1, 0)))
             if zone_id in billing_zones:
                 active_queue_depth = max(active_queue_depth - 1, 0)

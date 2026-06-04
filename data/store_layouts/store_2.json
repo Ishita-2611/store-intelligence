@@ -22,6 +22,7 @@
       "clip_start_utc": "2026-06-02T10:18:19Z",
       "detector_scale": 0.5,
       "min_motion_area": 1800,
+      "emit_entry_events": false,
       "entry_zone": "STORE_2_ENTRY_THRESHOLD",
       "entry_trigger_zones": ["STORE_2_ENTRY_THRESHOLD"],
       "exit_zone": "STORE_2_EXIT_THRESHOLD",

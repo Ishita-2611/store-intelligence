@@ -9,6 +9,8 @@ env/
 outputs/submission/
 outputs/uploads/
 outputs/localtest/
+outputs/*.jsonl
+!outputs/.gitkeep
 
 # Large/source challenge assets stay outside the repo.
 *.mp4
