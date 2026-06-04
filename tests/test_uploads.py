@@ -16,7 +16,7 @@ from app.uploads import (
     upload_controller,
     write_precomputed_events_for_upload,
 )
-from pipeline.layouts import camera_key_for_name, layout_path_for_zip
+from pipeline.layouts import camera_key_for_name, layout_path_for_camera_name, layout_path_for_zip
 
 
 client = TestClient(app)
@@ -70,6 +70,15 @@ def test_store_zip_layouts_are_detected_from_archive_members(tmp_path) -> None:
     assert layout_path_for_zip(store_1_zip).name == "store_1.json"
     assert layout_path_for_zip(store_2_zip).name == "store_2.json"
     assert camera_id_for_filename("CAM 5 - billing.mp4") == "STORE_1_CAM_5_BILLING"
+
+
+def test_single_mp4_upload_layout_is_detected_from_camera_name(tmp_path) -> None:
+    wrapped_mp4_zip = tmp_path / "single-camera.zip"
+    with zipfile.ZipFile(wrapped_mp4_zip, "w") as archive:
+        archive.writestr("CCTV Footage/CAM 1 - zone.mp4", b"fake-video")
+
+    assert layout_path_for_camera_name("CAM 1 - zone.mp4").name == "store_1.json"
+    assert layout_path_for_zip(wrapped_mp4_zip).name == "store_1.json"
 
 
 def test_store_layouts_use_floor_plan_zone_names() -> None:
