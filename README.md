@@ -105,6 +105,13 @@ pip install -r requirements-ml.txt
 python -m pipeline.detect --video-zip "D:\downloads\Store 1-20260602T101818Z-3-001ec38db8.zip" --pos-csv data\pos_transactions.csv --out outputs\detected_events.jsonl
 ```
 
+For GPU-backed YOLO processing, install the ML requirements on a machine with a CUDA-enabled PyTorch/driver setup and set the YOLO device before running the detector or upload server:
+
+```powershell
+$env:YOLO_DEVICE="0"
+uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
 Production behaviors currently included:
 
 - Docker entrypoint and Render-friendly `PORT` handling.
@@ -133,7 +140,7 @@ The dashboard is served by the same FastAPI app:
 http://127.0.0.1:8000/dashboard
 ```
 
-The dashboard has reliable simulated real-time demos for the hosted environment: `Replay sample` streams the provided `ST1076` sample-event resource, `Replay Store 1 all` streams the complete `data/store_1_events.jsonl` file, and `Replay camera` streams one preprocessed Store 1 camera at a time from that same file. The Store 1 JSONL was preprocessed offline from the supplied Store 1 CCTV zip because that raw zip is too large for hosted browser upload. Raw CCTV upload still supports smaller Store 1 and Store 2 ZIP/MP4 files; uploaded events report `STORE_1` or `STORE_2`, and the dashboard switches analytics to that uploaded store automatically. Hosted uploads run a short default smoke window of 5 seconds per camera with stride 45 so Render can finish quickly; set `UPLOAD_MAX_SECONDS` and `UPLOAD_SAMPLE_STRIDE` for deeper local analysis.
+The dashboard has reliable simulated real-time demos for the hosted environment: `Replay sample` streams the provided `ST1076` sample-event resource, `Replay Store 1 all` streams the complete `data/store_1_events.jsonl` file, and `Replay camera` streams one preprocessed Store 1 camera at a time from that same file. The Store 1 JSONL was preprocessed offline from the supplied Store 1 CCTV zip because that raw zip is too large for hosted browser upload. Raw CCTV upload still supports smaller Store 1 and Store 2 ZIP/MP4 files; uploaded events report `STORE_1` or `STORE_2`, and the dashboard switches analytics to that uploaded store automatically. Uploaded raw footage is analyzed completely by default with stride 45; set `UPLOAD_MAX_SECONDS` to a positive value only when you intentionally want a shorter smoke run, and set `UPLOAD_SAMPLE_STRIDE` for deeper or faster local analysis.
 
 Run tests:
 

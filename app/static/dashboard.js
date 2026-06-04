@@ -311,17 +311,18 @@ function uploadDetail(upload) {
   if (upload.status === "uploading") return upload.detail || "Uploading footage to the server.";
   if (upload.status === "queued") return "Queued for analysis.";
   if (upload.status === "processing") {
-    const windowSeconds = upload.analysis_window_seconds || 60;
+    const windowSeconds = upload.analysis_window_seconds;
+    const windowCopy = windowSeconds ? `a ${windowSeconds}s window per camera` : "complete footage for each camera";
     const cameraProgress = upload.total_cameras
       ? ` Camera ${upload.processed_cameras || 0}/${upload.total_cameras}${upload.current_camera ? `: ${upload.current_camera}` : ""}.`
       : "";
-    return `Analyzing a ${windowSeconds}s quick window per camera with the detector.${cameraProgress} Results depend on visible people, camera naming, and zone coverage.`;
+    return `Analyzing ${windowCopy} with the detector.${cameraProgress} Results depend on visible people, camera naming, and zone coverage.`;
   }
   if (upload.status === "completed") {
     if (!upload.accepted_events) {
       return "Analysis completed, but no customer events were detected. Use Replay sample / Replay Store 1 for provided event streams, or upload complete raw CCTV with camera names matching the layout.";
     }
-    return `${numberFmt.format(upload.accepted_events || 0)} events loaded, ${numberFmt.format(upload.rejected_events || 0)} rejected. Low-confidence fallback events are used only if CV detects no visible people in the hosted quick window.`;
+    return `${numberFmt.format(upload.accepted_events || 0)} events loaded, ${numberFmt.format(upload.rejected_events || 0)} rejected. Low-confidence fallback events are used only if CV detects no visible people.`;
   }
   if (upload.status === "failed") return upload.error || "Upload analysis failed.";
   return "Waiting for upload status.";
