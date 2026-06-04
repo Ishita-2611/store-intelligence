@@ -105,12 +105,23 @@ pip install -r requirements-ml.txt
 python -m pipeline.detect --video-zip "D:\downloads\Store 1-20260602T101818Z-3-001ec38db8.zip" --pos-csv data\pos_transactions.csv --out outputs\detected_events.jsonl
 ```
 
-For GPU-backed YOLO processing, install the ML requirements on a machine with a CUDA-enabled PyTorch/driver setup and set the YOLO device before running the detector or upload server:
+For NVIDIA/CUDA-backed YOLO processing, install the ML requirements on a machine with a CUDA-enabled PyTorch/driver setup and set the YOLO device before running the detector or upload server:
 
 ```powershell
 $env:YOLO_DEVICE="0"
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
+
+For AMD Radeon GPUs on Windows, use the optional ONNX Runtime DirectML path. First install the AMD/DirectML extras and create or provide a YOLO ONNX model:
+
+```powershell
+pip install -r requirements-amd.txt
+yolo export model=yolov8n.pt format=onnx imgsz=640
+$env:YOLO_ONNX_MODEL="yolov8n.onnx"
+uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+When `YOLO_ONNX_MODEL` is set and `onnxruntime-directml` is installed, the detector tries DirectML first for AMD GPU inference, then falls back to the existing Ultralytics/OpenCV path if DirectML is unavailable.
 
 Production behaviors currently included:
 

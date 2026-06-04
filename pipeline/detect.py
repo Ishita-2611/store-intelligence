@@ -117,6 +117,10 @@ def detect_people(
     camera_cfg: dict[str, Any],
 ) -> list[tuple[BBox, float]]:
     scale = float(camera_cfg.get("detector_scale", 0.5))
+    detections = _directml_detections(frame, scale, camera_cfg)
+    if len(detections) >= int(camera_cfg.get("min_expected_detections", 1)):
+        return non_max_suppression(detections, overlap_threshold=0.45)
+
     detections = _yolo_detections(frame, scale, camera_cfg)
     if len(detections) >= int(camera_cfg.get("min_expected_detections", 1)):
         return non_max_suppression(detections, overlap_threshold=0.45)
@@ -229,6 +233,28 @@ def _hog_detections(hog: cv2.HOGDescriptor, frame: np.ndarray) -> tuple[list[BBo
     return [tuple(map(int, rect)) for rect in rects], [float(w) for w in weights]
 
 
+def _directml_detections(frame: np.ndarray, scale: float, camera_cfg: dict[str, Any]) -> list[tuple[BBox, float]]:
+    model_path = str(camera_cfg.get("yolo_onnx_model") or os.getenv("YOLO_ONNX_MODEL", "")).strip()
+    if not model_path:
+        return []
+    session = _load_directml_session(model_path)
+    if session is None:
+        return []
+
+    input_meta = session.get_inputs()[0]
+    input_name = input_meta.name
+    input_shape = input_meta.shape
+    input_h = int(input_shape[2]) if len(input_shape) >= 4 and isinstance(input_shape[2], int) else int(camera_cfg.get("yolo_imgsz", 640))
+    input_w = int(input_shape[3]) if len(input_shape) >= 4 and isinstance(input_shape[3], int) else input_h
+    original_h, original_w = frame.shape[:2]
+    image = cv2.resize(frame, (input_w, input_h))
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+    image = np.transpose(image, (2, 0, 1))[None, ...]
+
+    outputs = session.run(None, {input_name: image})
+    return _parse_yolo_onnx_output(outputs[0], original_w, original_h, input_w, input_h, float(camera_cfg.get("yolo_min_confidence", 0.25)))
+
+
 def _yolo_detections(frame: np.ndarray, scale: float, camera_cfg: dict[str, Any]) -> list[tuple[BBox, float]]:
     model = _load_yolo_model(str(camera_cfg.get("yolo_model", "yolov8n.pt")))
     if model is None:
@@ -254,6 +280,45 @@ def _yolo_detections(frame: np.ndarray, scale: float, camera_cfg: dict[str, Any]
     return detections
 
 
+def _parse_yolo_onnx_output(
+    output: np.ndarray,
+    original_w: int,
+    original_h: int,
+    input_w: int,
+    input_h: int,
+    min_confidence: float,
+) -> list[tuple[BBox, float]]:
+    predictions = np.squeeze(output)
+    if predictions.ndim != 2:
+        return []
+    if predictions.shape[0] in {84, 85} and predictions.shape[1] not in {84, 85}:
+        predictions = predictions.T
+
+    x_scale = original_w / input_w
+    y_scale = original_h / input_h
+    detections: list[tuple[BBox, float]] = []
+    for row in predictions:
+        if len(row) < 5:
+            continue
+        x_center, y_center, width, height = [float(value) for value in row[:4]]
+        if len(row) == 5:
+            confidence = float(row[4])
+        else:
+            class_scores = row[4:]
+            class_id = int(np.argmax(class_scores))
+            if class_id != 0:
+                continue
+            confidence = float(class_scores[class_id])
+        if confidence < min_confidence:
+            continue
+        x = int((x_center - width / 2) * x_scale)
+        y = int((y_center - height / 2) * y_scale)
+        w = int(width * x_scale)
+        h = int(height * y_scale)
+        detections.append(((max(0, x), max(0, y), max(0, w), max(0, h)), round(min(max(confidence, 0.0), 1.0), 3)))
+    return non_max_suppression(detections, overlap_threshold=0.45)
+
+
 @lru_cache(maxsize=2)
 def _load_yolo_model(model_name: str) -> Any | None:
     if os.getenv("DISABLE_YOLO", "").lower() in {"1", "true", "yes"}:
@@ -263,6 +328,22 @@ def _load_yolo_model(model_name: str) -> Any | None:
     except ImportError:
         return None
     return YOLO(model_name)
+
+
+@lru_cache(maxsize=2)
+def _load_directml_session(model_path: str) -> Any | None:
+    if os.getenv("DISABLE_DIRECTML", "").lower() in {"1", "true", "yes"}:
+        return None
+    path = Path(model_path)
+    if not path.exists():
+        return None
+    try:
+        import onnxruntime as ort
+    except ImportError:
+        return None
+    providers = ort.get_available_providers()
+    preferred = ["DmlExecutionProvider", "CPUExecutionProvider"] if "DmlExecutionProvider" in providers else ["CPUExecutionProvider"]
+    return ort.InferenceSession(str(path), providers=preferred)
 
 
 def load_pos_times(path: str) -> dict[str, list[datetime]]:
