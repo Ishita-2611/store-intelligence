@@ -15,10 +15,18 @@
             <p class="eyebrow">Purplle Mumbai - ST1076</p>
           </div>
           <h1>Store Intelligence Command Center</h1>
-          <p class="subtitle">Replay the provided ST1076 sample stream, or upload complete CCTV footage when raw clips are available.</p>
+          <p class="subtitle">Replay the provided ST1076 stream, replay preprocessed Store 1 CCTV, or upload smaller raw clips when available.</p>
         </div>
         <div class="actions" aria-label="Dashboard controls">
           <button id="startReplay" type="button" title="Replay the preprocessed sample events">Replay sample</button>
+          <button id="startStore1Replay" type="button" title="Replay all preprocessed Store 1 CCTV analytics">Replay Store 1 all</button>
+          <select id="store1CameraStream" title="Choose a preprocessed Store 1 camera stream">
+            <option value="store1_cam1">CAM 1 - Zone</option>
+            <option value="store1_cam2">CAM 2 - Zone</option>
+            <option value="store1_cam3">CAM 3 - Entry</option>
+            <option value="store1_cam5">CAM 5 - Billing</option>
+          </select>
+          <button id="startStore1CameraReplay" type="button" title="Replay one preprocessed Store 1 camera">Replay camera</button>
           <button id="resetReplay" type="button" title="Stop analysis and clear dashboard data">Reset all</button>
         </div>
       </header>
@@ -48,7 +56,7 @@
         <div class="upload-copy">
           <p class="eyebrow">Part E - CCTV ingestion</p>
           <h2>Analyze optional raw footage</h2>
-          <p>Upload a CCTV ZIP or MP4 clip when complete raw footage is available. The reviewer demo uses the committed sample stream.</p>
+          <p>Upload a CCTV ZIP or MP4 clip when complete raw footage is available. The reviewer demo can replay committed sample or Store 1 CCTV events.</p>
         </div>
         <form id="uploadForm" class="upload-form">
           <label class="file-picker" for="cctvFile">

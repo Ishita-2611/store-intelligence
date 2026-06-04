@@ -11,6 +11,45 @@ from .ingestion import store
 
 
 DEMO_EVENTS_PATH = Path("data/sample_events.jsonl")
+STORE_1_EVENTS_PATH = Path("data/store_1_events.jsonl")
+
+
+REPLAY_STREAMS = {
+    "sample": {
+        "path": DEMO_EVENTS_PATH,
+        "label": "ST1076 sample replay",
+        "store_id": "ST1076",
+    },
+    "store1": {
+        "path": STORE_1_EVENTS_PATH,
+        "label": "Store 1 complete replay",
+        "store_id": "STORE_1",
+    },
+    "store1_cam1": {
+        "path": STORE_1_EVENTS_PATH,
+        "label": "Store 1 CAM 1 zone replay",
+        "store_id": "STORE_1",
+        "camera_id": "STORE_1_CAM_1_ZONE",
+    },
+    "store1_cam2": {
+        "path": STORE_1_EVENTS_PATH,
+        "label": "Store 1 CAM 2 zone replay",
+        "store_id": "STORE_1",
+        "camera_id": "STORE_1_CAM_2_ZONE",
+    },
+    "store1_cam3": {
+        "path": STORE_1_EVENTS_PATH,
+        "label": "Store 1 CAM 3 entry replay",
+        "store_id": "STORE_1",
+        "camera_id": "STORE_1_CAM_3_ENTRY",
+    },
+    "store1_cam5": {
+        "path": STORE_1_EVENTS_PATH,
+        "label": "Store 1 CAM 5 billing replay",
+        "store_id": "STORE_1",
+        "camera_id": "STORE_1_CAM_5_BILLING",
+    },
+}
 
 
 @dataclass
@@ -23,6 +62,9 @@ class ReplayState:
     started_at: str | None = None
     completed_at: str | None = None
     last_error: str | None = None
+    stream_id: str = "sample"
+    stream_label: str = "ST1076 sample replay"
+    store_id: str = "ST1076"
 
 
 class ReplayController:
@@ -51,11 +93,11 @@ class ReplayController:
                 self._state.completed_at = _now()
             return self._state.__dict__.copy()
 
-    def start(self, batch_size: int = 25, interval_ms: int = 700) -> dict[str, Any]:
+    def start(self, batch_size: int = 25, interval_ms: int = 700, stream: str = "sample") -> dict[str, Any]:
         with self._lock:
             if self._state.running:
                 return self._state.__dict__.copy()
-            events = load_demo_events()
+            events, stream_config = load_demo_events(stream)
             store.reset()
             self._stop_event.clear()
             self._state = ReplayState(
@@ -64,6 +106,9 @@ class ReplayController:
                 batch_size=max(1, min(batch_size, 100)),
                 interval_ms=max(100, min(interval_ms, 5000)),
                 started_at=_now(),
+                stream_id=stream,
+                stream_label=str(stream_config["label"]),
+                store_id=str(stream_config["store_id"]),
             )
             self._thread = threading.Thread(target=self._run, args=(events,), daemon=True)
             self._thread.start()
@@ -96,10 +141,18 @@ class ReplayController:
             self._state.completed_at = _now()
 
 
-def load_demo_events() -> list[dict[str, Any]]:
-    if not DEMO_EVENTS_PATH.exists():
-        raise FileNotFoundError(f"demo event stream not found: {DEMO_EVENTS_PATH}")
-    return [json.loads(line) for line in DEMO_EVENTS_PATH.read_text(encoding="utf-8").splitlines() if line.strip()]
+def load_demo_events(stream: str = "sample") -> tuple[list[dict[str, Any]], dict[str, str | Path]]:
+    stream_config = REPLAY_STREAMS.get(stream)
+    if stream_config is None:
+        raise FileNotFoundError(f"demo event stream not configured: {stream}")
+    path = DEMO_EVENTS_PATH if stream == "sample" else Path(stream_config["path"])
+    if not path.exists():
+        raise FileNotFoundError(f"demo event stream not found: {path}")
+    events = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    camera_id = stream_config.get("camera_id")
+    if camera_id:
+        events = [event for event in events if event.get("camera_id") == camera_id]
+    return events, stream_config
 
 
 def _now() -> str:

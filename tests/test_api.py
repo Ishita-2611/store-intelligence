@@ -189,6 +189,8 @@ def test_dashboard_and_replay_status_are_available() -> None:
 
     assert dashboard.status_code == 200
     assert "Store Intelligence Command Center" in dashboard.text
+    assert "Replay Store 1 all" in dashboard.text
+    assert "Replay camera" in dashboard.text
     assert status.status_code == 200
     assert status.json()["running"] is False
     assert healthz.json() == {"status": "ok"}
@@ -218,6 +220,87 @@ def test_demo_replay_streams_events_from_jsonl(monkeypatch, tmp_path) -> None:
 
     assert status["ingested_events"] == 2
     assert metrics["unique_visitors"] == 1
+
+
+
+def test_store_1_replay_streams_preprocessed_cctv_events(monkeypatch, tmp_path) -> None:
+    store_1_path = tmp_path / "store_1_events.jsonl"
+    store_1_events = [
+        {
+            **event("store1-entry", "VIS_STORE_1", "ENTRY", "2026-06-02T10:00:00Z"),
+            "store_id": "STORE_1",
+            "camera_id": "STORE_1_CAM_3_ENTRY",
+            "zone_id": "STORE_1_ENTRY_THRESHOLD",
+        },
+        {
+            **event("store1-zone", "VIS_STORE_1", "ZONE_ENTER", "2026-06-02T10:00:03Z", "STORE_1_FACE_MARS_NYBAE_MENS"),
+            "store_id": "STORE_1",
+            "camera_id": "STORE_1_CAM_2_ZONE",
+        },
+        {
+            **event("store1-billing", "VIS_STORE_1", "BILLING_QUEUE_JOIN", "2026-06-02T10:00:05Z", "STORE_1_CASH_COUNTER_QUEUE", queue_depth=1),
+            "store_id": "STORE_1",
+            "camera_id": "STORE_1_CAM_5_BILLING",
+        },
+    ]
+    store_1_path.write_text("\n".join(json.dumps(item) for item in store_1_events), encoding="utf-8")
+    monkeypatch.setitem(replay.REPLAY_STREAMS["store1"], "path", store_1_path)
+
+    client.post("/demo/replay/reset")
+    response = client.post("/demo/replay/start?stream=store1&batch_size=2&interval_ms=100")
+
+    assert response.status_code == 200
+    assert response.json()["store_id"] == "STORE_1"
+    for _ in range(20):
+        status = client.get("/demo/replay/status").json()
+        if not status["running"]:
+            break
+        time.sleep(0.05)
+
+    metrics = client.get("/stores/STORE_1/metrics").json()
+    heatmap = client.get("/stores/STORE_1/heatmap").json()
+
+    assert metrics["unique_visitors"] == 1
+    assert metrics["queue_depth"] == 1
+    assert any(zone["zone_id"] == "STORE_1_FACE_MARS_NYBAE_MENS" for zone in heatmap["zones"])
+
+
+def test_store_1_camera_replay_streams_one_preprocessed_camera(monkeypatch, tmp_path) -> None:
+    store_1_path = tmp_path / "store_1_events.jsonl"
+    store_1_events = [
+        {
+            **event("store1-cam1", "VIS_CAM_1", "ZONE_ENTER", "2026-06-02T10:00:01Z", "STORE_1_MINIMALIS_AQUALOGI_FOXTAL_JC"),
+            "store_id": "STORE_1",
+            "camera_id": "STORE_1_CAM_1_ZONE",
+        },
+        {
+            **event("store1-cam2", "VIS_CAM_2", "ZONE_ENTER", "2026-06-02T10:00:02Z", "STORE_1_FACE_MARS_NYBAE_MENS"),
+            "store_id": "STORE_1",
+            "camera_id": "STORE_1_CAM_2_ZONE",
+        },
+    ]
+    store_1_path.write_text("\n".join(json.dumps(item) for item in store_1_events), encoding="utf-8")
+    monkeypatch.setitem(replay.REPLAY_STREAMS["store1_cam2"], "path", store_1_path)
+
+    client.post("/demo/replay/reset")
+    response = client.post("/demo/replay/start?stream=store1_cam2&batch_size=1&interval_ms=100")
+
+    assert response.status_code == 200
+    assert response.json()["stream_id"] == "store1_cam2"
+    assert response.json()["store_id"] == "STORE_1"
+    for _ in range(20):
+        status = client.get("/demo/replay/status").json()
+        if not status["running"]:
+            break
+        time.sleep(0.05)
+
+    status = client.get("/demo/replay/status").json()
+    metrics = client.get("/stores/STORE_1/metrics").json()
+    heatmap = client.get("/stores/STORE_1/heatmap").json()
+
+    assert status["ingested_events"] == 1
+    assert metrics["unique_visitors"] == 1
+    assert {zone["zone_id"] for zone in heatmap["zones"]} == {"STORE_1_FACE_MARS_NYBAE_MENS"}
 
 
 def test_reset_stops_running_sample_replay(monkeypatch, tmp_path) -> None:

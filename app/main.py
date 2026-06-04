@@ -88,9 +88,9 @@ def get_healthz() -> dict:
 
 
 @app.post("/demo/replay/start")
-def start_demo_replay(batch_size: int = 25, interval_ms: int = 700) -> dict:
+def start_demo_replay(batch_size: int = 25, interval_ms: int = 700, stream: str = "sample") -> dict:
     upload_controller.reset()
-    return replay_controller.start(batch_size=batch_size, interval_ms=interval_ms)
+    return replay_controller.start(batch_size=batch_size, interval_ms=interval_ms, stream=stream)
 
 
 @app.post("/demo/replay/reset")

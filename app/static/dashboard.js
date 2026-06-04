@@ -6,6 +6,9 @@ let localUploadNotice = null;
 
 const els = {
   startReplay: document.querySelector("#startReplay"),
+  startStore1Replay: document.querySelector("#startStore1Replay"),
+  store1CameraStream: document.querySelector("#store1CameraStream"),
+  startStore1CameraReplay: document.querySelector("#startStore1CameraReplay"),
   resetReplay: document.querySelector("#resetReplay"),
   uploadForm: document.querySelector("#uploadForm"),
   cctvFile: document.querySelector("#cctvFile"),
@@ -34,16 +37,23 @@ const els = {
   dwellList: document.querySelector("#dwellList"),
 };
 
-els.startReplay.addEventListener("click", async () => {
+els.startReplay.addEventListener("click", () => startReplayStream("sample", 22, 550));
+els.startStore1Replay.addEventListener("click", () => startReplayStream("store1", 4, 650));
+els.startStore1CameraReplay.addEventListener("click", () => startReplayStream(els.store1CameraStream.value, 2, 700));
+
+async function startReplayStream(stream, batchSize, intervalMs) {
   els.startReplay.disabled = true;
+  els.startStore1Replay.disabled = true;
+  els.startStore1CameraReplay.disabled = true;
+  els.store1CameraStream.disabled = true;
   els.uploadButton.disabled = true;
   try {
-    await postJson("/demo/replay/start?batch_size=22&interval_ms=550");
+    await postJson(`/demo/replay/start?stream=${stream}&batch_size=${batchSize}&interval_ms=${intervalMs}`);
     await refresh();
   } catch (error) {
     renderUpload({ status: "failed", error: error.message });
   }
-});
+}
 
 els.resetReplay.addEventListener("click", async () => {
   els.resetReplay.disabled = true;
@@ -85,7 +95,7 @@ els.uploadForm.addEventListener("submit", async (event) => {
     localUploadNotice = {
       status: "failed",
       filename: file.name,
-      error: `${formatBytes(file.size)} is too large for hosted browser upload. Use Replay sample for the deployed demo, upload a smaller MP4 clip, or run the full ZIP locally through the backend.`,
+      error: `${formatBytes(file.size)} is too large for hosted browser upload. Use Replay sample or Replay Store 1 for the deployed demo, upload a smaller MP4 clip, or run the full ZIP locally through the backend.`,
     };
     renderUpload(localUploadNotice);
     return;
@@ -106,7 +116,7 @@ els.uploadForm.addEventListener("submit", async (event) => {
     localUploadNotice = {
       status: "failed",
       filename: file.name,
-      error: `${error.message}. Large CCTV ZIP uploads can fail on hosted services; try a smaller MP4 clip or use Replay sample for the reviewer demo.`,
+      error: `${error.message}. Large CCTV ZIP uploads can fail on hosted services; try a smaller MP4 clip or use Replay sample / Replay Store 1 for the reviewer demo.`,
     };
     renderUpload(localUploadNotice);
   }
@@ -118,7 +128,7 @@ async function refresh() {
     getJson("/demo/replay/status"),
     getJson("/uploads/cctv/latest"),
   ]);
-  const activeStoreId = upload.store_id || defaultStoreId;
+  const activeStoreId = upload.store_id || replay.store_id || defaultStoreId;
   const [metrics, funnel, heatmap, anomalies] = await Promise.all([
     getJson(`/stores/${activeStoreId}/metrics`),
     getJson(`/stores/${activeStoreId}/funnel`),
@@ -153,11 +163,12 @@ function renderReplay(replay) {
   const total = replay.total_events || 0;
   const ingested = replay.ingested_events || 0;
   const pct = total ? Math.min(100, Math.round((ingested / total) * 100)) : 0;
+  const label = replay.stream_label || "Sample replay";
   els.replayLabel.textContent = replay.running
-    ? "Sample replay streaming"
+    ? `${label} streaming`
     : total && ingested === total
-      ? "Sample replay complete"
-      : "Sample replay idle";
+      ? `${label} complete`
+      : `${label} idle`;
   els.replayCounts.textContent = `${numberFmt.format(ingested)} / ${numberFmt.format(total)} events`;
   els.replayBar.style.width = `${pct}%`;
 }
@@ -173,6 +184,9 @@ function syncControls(replay, upload) {
   const visibleUpload = visibleUploadState(upload);
   const uploadRunning = visibleUpload.status === "queued" || visibleUpload.status === "processing" || visibleUpload.status === "uploading";
   els.startReplay.disabled = replay.running || uploadRunning;
+  els.startStore1Replay.disabled = replay.running || uploadRunning;
+  els.startStore1CameraReplay.disabled = replay.running || uploadRunning;
+  els.store1CameraStream.disabled = replay.running || uploadRunning;
   els.uploadButton.disabled = replay.running || uploadRunning;
 }
 
@@ -292,7 +306,7 @@ function staleFeedDetail(health) {
 }
 
 function uploadDetail(upload) {
-  if (!upload || upload.status === "idle") return "Use replay for the provided resource set, or upload raw CCTV for a new analysis.";
+  if (!upload || upload.status === "idle") return "Use replay for the provided resource set, replay Store 1, or upload raw CCTV for a new analysis.";
   if (upload.status === "selected") return upload.detail || "File selected. Click Analyze footage to upload it.";
   if (upload.status === "uploading") return upload.detail || "Uploading footage to the server.";
   if (upload.status === "queued") return "Queued for analysis.";
@@ -305,7 +319,7 @@ function uploadDetail(upload) {
   }
   if (upload.status === "completed") {
     if (!upload.accepted_events) {
-      return "Analysis completed, but no customer events were detected. Use Replay sample for the provided event stream, or upload complete raw CCTV with camera names matching the layout.";
+      return "Analysis completed, but no customer events were detected. Use Replay sample / Replay Store 1 for provided event streams, or upload complete raw CCTV with camera names matching the layout.";
     }
     return `${numberFmt.format(upload.accepted_events || 0)} events loaded, ${numberFmt.format(upload.rejected_events || 0)} rejected. Low-confidence fallback events are used only if CV detects no visible people in the hosted quick window.`;
   }

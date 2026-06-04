@@ -45,6 +45,18 @@ button {
   cursor: pointer;
 }
 
+select {
+  min-height: 40px;
+  min-width: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 12px;
+  font: inherit;
+  font-weight: 700;
+}
+
 button.primary {
   border-color: var(--purplle-deep);
   background: var(--purplle-deep);
@@ -60,6 +72,11 @@ button.primary:hover {
 }
 
 button:disabled {
+  opacity: 0.58;
+  cursor: wait;
+}
+
+select:disabled {
   opacity: 0.58;
   cursor: wait;
 }
@@ -141,9 +158,13 @@ h2 {
 
 .actions {
   display: grid;
-  grid-template-columns: 170px 112px;
+  grid-template-columns: 150px 160px;
   gap: 10px;
   justify-content: end;
+}
+
+.actions select {
+  grid-column: 1 / -1;
 }
 
 .control-band {

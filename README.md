@@ -24,6 +24,12 @@ For a quick smoke run:
 python -m pipeline.detect --video-zip "D:\downloads\Store 2-20260602T101819Z-3-001099f208.zip" --pos-csv data\pos_transactions.csv --out outputs\detected_events_sample.jsonl --sample-stride 45 --max-seconds 3
 ```
 
+For the committed Store 1 demo replay, preprocess the large Store 1 zip once into a small JSONL stream:
+
+```powershell
+python -m pipeline.detect --video-zip "D:\downloads\Store 1-20260602T101818Z-3-001ec38db8.zip" --pos-csv data\pos_transactions.csv --out data\store_1_events.jsonl --sample-stride 45 --max-seconds 5
+```
+
 When the zip contains `Store 1/` or `Store 2/`, the detector automatically selects the matching layout from `data/store_layouts/`. Store 2 has two entry cameras, so `ENTRY_1` is the authoritative customer-count camera and `ENTRY_2` contributes zone observation without double-counting visitor entries. Large CCTV zip files are not committed to Git; keep them in the provided download location and pass their local path to the command.
 
 The event stream is newline-delimited JSON and follows the challenge schema:
@@ -127,7 +133,7 @@ The dashboard is served by the same FastAPI app:
 http://127.0.0.1:8000/dashboard
 ```
 
-The primary reviewer demo is `Replay sample`, which streams the new `ST1076` sample-event resource into the API in simulated real time. CCTV upload also supports the provided Store 1 and Store 2 zips; uploaded events report `STORE_1` or `STORE_2`, and the dashboard switches analytics to that uploaded store automatically. Hosted uploads run a short default smoke window of 5 seconds per camera with stride 45 so Render can finish quickly; set `UPLOAD_MAX_SECONDS` and `UPLOAD_SAMPLE_STRIDE` for deeper local analysis.
+The dashboard has reliable simulated real-time demos for the hosted environment: `Replay sample` streams the provided `ST1076` sample-event resource, `Replay Store 1 all` streams the complete `data/store_1_events.jsonl` file, and `Replay camera` streams one preprocessed Store 1 camera at a time from that same file. The Store 1 JSONL was preprocessed offline from the supplied Store 1 CCTV zip because that raw zip is too large for hosted browser upload. Raw CCTV upload still supports smaller Store 1 and Store 2 ZIP/MP4 files; uploaded events report `STORE_1` or `STORE_2`, and the dashboard switches analytics to that uploaded store automatically. Hosted uploads run a short default smoke window of 5 seconds per camera with stride 45 so Render can finish quickly; set `UPLOAD_MAX_SECONDS` and `UPLOAD_SAMPLE_STRIDE` for deeper local analysis.
 
 Run tests:
 
