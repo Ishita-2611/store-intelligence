@@ -27,11 +27,8 @@ python -m pipeline.detect --video-zip "D:\downloads\Store 2-20260602T101819Z-3-0
 For the committed Store 1 demo replay, preprocess the large Store 1 zip once into a small JSONL stream:
 
 ```powershell
-pip install -r requirements-ml.txt
-python -m pipeline.detect --video-zip "D:\downloads\Store 1-20260602T101818Z-3-001ec38db8.zip" --pos-csv data\pos_transactions.csv --out data\store_1_events.jsonl --sample-stride 45 --max-seconds 5 --detector yolo --yolo-model yolov8n.pt --yolo-conf 0.25
+python -m pipeline.detect --video-zip "D:\downloads\Store 1-20260602T101818Z-3-001ec38db8.zip" --pos-csv data\pos_transactions.csv --out data\store_1_events.jsonl --sample-stride 45 --max-seconds 5
 ```
-
-Use `--detector yolo` when regenerating the committed Store 1 replay to fail fast if YOLO is unavailable. Use `--detector auto` for a safer local smoke run that tries YOLO first and falls back to OpenCV HOG/motion detection.
 
 When the zip contains `Store 1/` or `Store 2/`, the detector automatically selects the matching layout from `data/store_layouts/`. Store 2 has two entry cameras, so `ENTRY_1` is the authoritative customer-count camera and `ENTRY_2` contributes zone observation without double-counting visitor entries. Large CCTV zip files are not committed to Git; keep them in the provided download location and pass their local path to the command.
 
@@ -105,7 +102,7 @@ Optional stronger local detector:
 
 ```powershell
 pip install -r requirements-ml.txt
-python -m pipeline.detect --video-zip "D:\downloads\Store 1-20260602T101818Z-3-001ec38db8.zip" --pos-csv data\pos_transactions.csv --out outputs\detected_events.jsonl --detector yolo --yolo-model yolov8n.pt --yolo-conf 0.25
+python -m pipeline.detect --video-zip "D:\downloads\Store 1-20260602T101818Z-3-001ec38db8.zip" --pos-csv data\pos_transactions.csv --out outputs\detected_events.jsonl
 ```
 
 Production behaviors currently included:

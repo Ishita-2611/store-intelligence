@@ -21,7 +21,6 @@ from .tracker import BBox, CentroidTracker, Track
 from .zones import containing_zones
 
 DEFAULT_OUT = Path("outputs/detected_events.jsonl")
-DETECTOR_MODES = {"auto", "yolo", "opencv"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -32,15 +31,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out", default=str(DEFAULT_OUT), help="JSONL destination")
     parser.add_argument("--sample-stride", type=int, default=6, help="Process every Nth frame")
     parser.add_argument("--max-seconds", type=float, default=None, help="Optional cap for quick validation")
-    parser.add_argument(
-        "--detector",
-        choices=sorted(DETECTOR_MODES),
-        default=os.getenv("DETECTOR", "auto").lower(),
-        help="Person detector mode: auto uses YOLO when available, yolo requires YOLO, opencv skips YOLO.",
-    )
-    parser.add_argument("--yolo-model", default=os.getenv("YOLO_MODEL", "yolov8n.pt"), help="Ultralytics model name or local weights path")
-    parser.add_argument("--yolo-device", default=os.getenv("YOLO_DEVICE"), help="Optional Ultralytics device, for example cpu, 0, or cuda:0")
-    parser.add_argument("--yolo-conf", type=float, default=float(os.getenv("YOLO_CONF", "0.25")), help="YOLO person confidence threshold")
     return parser.parse_args()
 
 
@@ -48,7 +38,6 @@ def main() -> None:
     args = parse_args()
     layout_path = layout_path_for_zip(args.video_zip, args.layout) if args.layout == str(DEFAULT_LAYOUT) else Path(args.layout)
     layout = json.loads(layout_path.read_text(encoding="utf-8"))
-    detector_overrides = detector_config_from_args(args)
     store_id = layout["store_id"]
     pos_times = load_pos_times(args.pos_csv) if args.pos_csv else {}
 
@@ -60,7 +49,7 @@ def main() -> None:
                 target = tmpdir_path / Path(member).name
                 extract_zip_member(archive, member, target)
                 camera_key = camera_key_for_name(target.name)
-                camera_cfg = {**layout["cameras"].get(camera_key, {}), **detector_overrides}
+                camera_cfg = layout["cameras"].get(camera_key, {})
                 camera_id = camera_cfg.get("camera_id", camera_key)
                 clip_start = _parse_clip_start(camera_cfg.get("clip_start_utc"))
                 process_video(
@@ -128,15 +117,9 @@ def detect_people(
     camera_cfg: dict[str, Any],
 ) -> list[tuple[BBox, float]]:
     scale = float(camera_cfg.get("detector_scale", 0.5))
-    detector = str(camera_cfg.get("detector", os.getenv("DETECTOR", "auto"))).lower()
-    if detector not in DETECTOR_MODES:
-        detector = "auto"
-
-    detections: list[tuple[BBox, float]] = []
-    if detector in {"auto", "yolo"}:
-        detections = _yolo_detections(frame, scale, camera_cfg, required=detector == "yolo")
-        if len(detections) >= int(camera_cfg.get("min_expected_detections", 1)) or detector == "yolo":
-            return non_max_suppression(detections, overlap_threshold=float(camera_cfg.get("nms_overlap_threshold", 0.45)))
+    detections = _yolo_detections(frame, scale, camera_cfg)
+    if len(detections) >= int(camera_cfg.get("min_expected_detections", 1)):
+        return non_max_suppression(detections, overlap_threshold=0.45)
 
     small = cv2.resize(frame, None, fx=scale, fy=scale)
     rects, weights = _hog_detections(hog, small)
@@ -148,7 +131,7 @@ def detect_people(
     if len(detections) < int(camera_cfg.get("min_expected_detections", 1)):
         detections.extend(_motion_detections(frame, subtractor, camera_cfg))
 
-    return non_max_suppression(detections, overlap_threshold=float(camera_cfg.get("nms_overlap_threshold", 0.45)))
+    return non_max_suppression(detections, overlap_threshold=0.45)
 
 
 def events_for_tracks(
@@ -246,32 +229,21 @@ def _hog_detections(hog: cv2.HOGDescriptor, frame: np.ndarray) -> tuple[list[BBo
     return [tuple(map(int, rect)) for rect in rects], [float(w) for w in weights]
 
 
-def _yolo_detections(frame: np.ndarray, scale: float, camera_cfg: dict[str, Any], required: bool = False) -> list[tuple[BBox, float]]:
-    model_name = str(camera_cfg.get("yolo_model") or os.getenv("YOLO_MODEL", "yolov8n.pt"))
-    model = _load_yolo_model(model_name)
+def _yolo_detections(frame: np.ndarray, scale: float, camera_cfg: dict[str, Any]) -> list[tuple[BBox, float]]:
+    model = _load_yolo_model(str(camera_cfg.get("yolo_model", "yolov8n.pt")))
     if model is None:
-        if required:
-            raise RuntimeError("YOLO detector requested but ultralytics is not installed or YOLO is disabled.")
         return []
 
-    min_confidence = float(camera_cfg.get("yolo_min_confidence", os.getenv("YOLO_CONF", 0.25)))
-    min_height = float(camera_cfg.get("min_person_height_px", 70)) * scale
+    min_confidence = float(camera_cfg.get("yolo_min_confidence", 0.25))
     small = cv2.resize(frame, None, fx=scale, fy=scale)
-    predict_kwargs: dict[str, Any] = {"classes": [0], "conf": min_confidence, "verbose": False}
-    yolo_device = camera_cfg.get("yolo_device") or os.getenv("YOLO_DEVICE")
-    if yolo_device:
-        predict_kwargs["device"] = str(yolo_device)
-    yolo_imgsz = camera_cfg.get("yolo_imgsz") or os.getenv("YOLO_IMGSZ")
-    if yolo_imgsz:
-        predict_kwargs["imgsz"] = int(yolo_imgsz)
-    results = model.predict(small, **predict_kwargs)
+    results = model.predict(small, classes=[0], conf=min_confidence, verbose=False)
     detections: list[tuple[BBox, float]] = []
     for result in results:
         for box in result.boxes:
             x1, y1, x2, y2 = [float(v) for v in box.xyxy[0]]
             width = max(0.0, x2 - x1)
             height = max(0.0, y2 - y1)
-            if height < min_height:
+            if height < 70 * scale:
                 continue
             confidence = float(box.conf[0])
             detections.append((_rescale_bbox((int(x1), int(y1), int(width), int(height)), 1 / scale), min(max(confidence, 0.0), 1.0)))
@@ -287,20 +259,6 @@ def _load_yolo_model(model_name: str) -> Any | None:
     except ImportError:
         return None
     return YOLO(model_name)
-
-
-def detector_config_from_args(args: argparse.Namespace) -> dict[str, Any]:
-    detector = str(args.detector).lower()
-    if detector not in DETECTOR_MODES:
-        detector = "auto"
-    config: dict[str, Any] = {
-        "detector": detector,
-        "yolo_model": args.yolo_model,
-        "yolo_min_confidence": args.yolo_conf,
-    }
-    if args.yolo_device:
-        config["yolo_device"] = args.yolo_device
-    return config
 
 
 def load_pos_times(path: str) -> dict[str, list[datetime]]:
