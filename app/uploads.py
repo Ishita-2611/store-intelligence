@@ -55,8 +55,9 @@ class UploadController:
     def create_job(self, upload: UploadFile) -> UploadJob:
         job_id = uuid.uuid4().hex[:12]
         filename = Path(upload.filename or f"upload-{job_id}.zip").name
-        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        source_path = UPLOAD_DIR / f"{job_id}-{filename}"
+        job_dir = UPLOAD_DIR / job_id
+        job_dir.mkdir(parents=True, exist_ok=True)
+        source_path = job_dir / filename
         with source_path.open("wb") as fh:
             shutil.copyfileobj(upload.file, fh)
 

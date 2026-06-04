@@ -48,6 +48,20 @@ def test_upload_endpoint_accepts_cctv_file(monkeypatch) -> None:
     assert response.json()["status"] == "queued"
 
 
+def test_uploaded_mp4_preserves_original_name_for_layout_detection(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(uploads, "UPLOAD_DIR", tmp_path)
+    upload = UploadFile(filename="entry 1.mp4", file=BytesIO(b"fake-video"))
+
+    job = upload_controller.create_job(upload)
+    saved_path = tmp_path / job.job_id / "entry 1.mp4"
+    zip_path = ensure_zip(saved_path)
+
+    assert saved_path.exists()
+    with zipfile.ZipFile(zip_path) as archive:
+        assert archive.namelist() == ["CCTV Footage/entry 1.mp4"]
+    assert layout_path_for_zip(zip_path).name == "store_2.json"
+
+
 def test_mp4_upload_is_wrapped_for_detector(tmp_path) -> None:
     video_path = tmp_path / "clip.mp4"
     video_path.write_bytes(b"fake mp4 bytes")
