@@ -1,5 +1,6 @@
 const defaultStoreId = "ST1076";
 const numberFmt = new Intl.NumberFormat("en-IN");
+let localUploadNotice = null;
 
 const els = {
   startReplay: document.querySelector("#startReplay"),
@@ -60,6 +61,14 @@ els.resetReplay.addEventListener("click", async () => {
 els.cctvFile.addEventListener("change", () => {
   const file = els.cctvFile.files[0];
   els.fileName.textContent = file ? file.name : "Choose CCTV footage";
+  localUploadNotice = file
+    ? {
+        status: "selected",
+        filename: file.name,
+        detail: `${formatBytes(file.size)} selected. Click Analyze footage to upload and start analysis.`,
+      }
+    : null;
+  renderUpload(localUploadNotice || { status: "idle" });
 });
 
 els.uploadForm.addEventListener("submit", async (event) => {
@@ -71,11 +80,23 @@ els.uploadForm.addEventListener("submit", async (event) => {
   }
 
   els.uploadButton.disabled = true;
+  localUploadNotice = {
+    status: "uploading",
+    filename: file.name,
+    detail: `${formatBytes(file.size)} upload in progress. Keep this tab open until the server creates an analysis job.`,
+  };
+  renderUpload(localUploadNotice);
   try {
     const job = await uploadCctv(file);
+    localUploadNotice = null;
     renderUpload(job);
   } catch (error) {
-    renderUpload({ status: "failed", error: error.message });
+    localUploadNotice = {
+      status: "failed",
+      filename: file.name,
+      error: `${error.message}. Large CCTV ZIP uploads can fail on hosted services; try a smaller MP4 clip or use Replay sample for the reviewer demo.`,
+    };
+    renderUpload(localUploadNotice);
   }
 });
 
@@ -95,7 +116,7 @@ async function refresh() {
 
   renderHealth(health);
   renderReplay(replay);
-  renderUpload(upload);
+  renderUpload(visibleUploadState(upload));
   syncControls(replay, upload);
   renderMetrics(metrics, heatmap);
   renderFunnel(funnel);
@@ -137,7 +158,8 @@ function renderUpload(upload, overrideDetail) {
 }
 
 function syncControls(replay, upload) {
-  const uploadRunning = upload.status === "queued" || upload.status === "processing";
+  const visibleUpload = visibleUploadState(upload);
+  const uploadRunning = visibleUpload.status === "queued" || visibleUpload.status === "processing" || visibleUpload.status === "uploading";
   els.startReplay.disabled = replay.running || uploadRunning;
   els.uploadButton.disabled = replay.running || uploadRunning;
 }
@@ -259,6 +281,8 @@ function staleFeedDetail(health) {
 
 function uploadDetail(upload) {
   if (!upload || upload.status === "idle") return "Use replay for the provided resource set, or upload raw CCTV for a new analysis.";
+  if (upload.status === "selected") return upload.detail || "File selected. Click Analyze footage to upload it.";
+  if (upload.status === "uploading") return upload.detail || "Uploading footage to the server.";
   if (upload.status === "queued") return "Queued for analysis.";
   if (upload.status === "processing") {
     const windowSeconds = upload.analysis_window_seconds || 60;
@@ -272,6 +296,26 @@ function uploadDetail(upload) {
   }
   if (upload.status === "failed") return upload.error || "Upload analysis failed.";
   return "Waiting for upload status.";
+}
+
+function visibleUploadState(upload) {
+  if (upload && upload.status && upload.status !== "idle") {
+    localUploadNotice = null;
+    return upload;
+  }
+  return localUploadNotice || upload || { status: "idle" };
+}
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes)) return "File";
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  return `${size.toFixed(unitIndex ? 1 : 0)} ${units[unitIndex]}`;
 }
 
 refresh();
