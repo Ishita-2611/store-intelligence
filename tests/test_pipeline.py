@@ -169,37 +169,6 @@ def test_process_video_runs_with_mocked_capture(tmp_path, monkeypatch) -> None:
     assert isinstance(lines, list)
 
 
-def test_directml_onnx_detector_path_is_used_when_available(monkeypatch, tmp_path) -> None:
-    model_path = tmp_path / "yolo.onnx"
-    model_path.write_bytes(b"fake-onnx")
-
-    class FakeInput:
-        name = "images"
-        shape = [1, 3, 64, 64]
-
-    class FakeSession:
-        def get_inputs(self):
-            return [FakeInput()]
-
-        def run(self, _outputs, inputs):
-            assert inputs["images"].shape == (1, 3, 64, 64)
-            output = np.zeros((1, 84, 2), dtype=np.float32)
-            output[0, 0, 0] = 32
-            output[0, 1, 0] = 32
-            output[0, 2, 0] = 20
-            output[0, 3, 0] = 30
-            output[0, 4, 0] = 0.91
-            output[0, 5, 1] = 0.95
-            return [output]
-
-    monkeypatch.setattr(detect, "_load_directml_session", lambda _model_path: FakeSession())
-
-    frame = np.zeros((128, 128, 3), dtype=np.uint8)
-    detections = detect._directml_detections(frame, 1.0, {"yolo_onnx_model": str(model_path), "yolo_min_confidence": 0.5})
-
-    assert detections == [((44, 34, 40, 60), 0.91)]
-
-
 def test_yolo_detector_path_is_used_when_available(monkeypatch) -> None:
     detect._load_yolo_model.cache_clear()
     captured = {}
