@@ -230,24 +230,36 @@ def _hog_detections(hog: cv2.HOGDescriptor, frame: np.ndarray) -> tuple[list[BBo
 
 
 def _yolo_detections(frame: np.ndarray, scale: float, camera_cfg: dict[str, Any]) -> list[tuple[BBox, float]]:
-    model = _load_yolo_model(str(camera_cfg.get("yolo_model", "yolov8n.pt")))
-    if model is None:
-        return []
+    try:
+        model = _load_yolo_model(str(camera_cfg.get("yolo_model", "yolov8n.pt")))
+        if model is None:
+            return []
 
-    min_confidence = float(camera_cfg.get("yolo_min_confidence", 0.25))
-    small = cv2.resize(frame, None, fx=scale, fy=scale)
-    results = model.predict(small, classes=[0], conf=min_confidence, verbose=False)
-    detections: list[tuple[BBox, float]] = []
-    for result in results:
-        for box in result.boxes:
-            x1, y1, x2, y2 = [float(v) for v in box.xyxy[0]]
-            width = max(0.0, x2 - x1)
-            height = max(0.0, y2 - y1)
-            if height < 70 * scale:
-                continue
-            confidence = float(box.conf[0])
-            detections.append((_rescale_bbox((int(x1), int(y1), int(width), int(height)), 1 / scale), min(max(confidence, 0.0), 1.0)))
-    return detections
+        min_confidence = float(camera_cfg.get("yolo_min_confidence", 0.25))
+        small = cv2.resize(frame, None, fx=scale, fy=scale)
+        device = camera_cfg.get("yolo_device")
+        if not device:
+            try:
+                import torch
+
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+            except ImportError:
+                device = "cpu"
+
+        results = model.predict(small, classes=[0], conf=min_confidence, device=device, verbose=False)
+        detections: list[tuple[BBox, float]] = []
+        for result in results:
+            for box in result.boxes:
+                x1, y1, x2, y2 = [float(v) for v in box.xyxy[0]]
+                width = max(0.0, x2 - x1)
+                height = max(0.0, y2 - y1)
+                if height < 70 * scale:
+                    continue
+                confidence = float(box.conf[0])
+                detections.append((_rescale_bbox((int(x1), int(y1), int(width), int(height)), 1 / scale), min(max(confidence, 0.0), 1.0)))
+        return detections
+    except Exception:
+        return []
 
 
 @lru_cache(maxsize=2)

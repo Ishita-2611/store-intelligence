@@ -23,7 +23,13 @@ UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "outputs/uploads"))
 LAYOUT_PATH = Path("data/store_layout.json")
 DEMO_EVENTS_PATH = Path("data/sample_events.jsonl")
 UPLOAD_SAMPLE_STRIDE = int(os.getenv("UPLOAD_SAMPLE_STRIDE", "45"))
-UPLOAD_MAX_SECONDS = float(os.getenv("UPLOAD_MAX_SECONDS", "5"))
+_upload_max_seconds_env = os.getenv("UPLOAD_MAX_SECONDS", "0")
+try:
+    UPLOAD_MAX_SECONDS = float(_upload_max_seconds_env)
+    if UPLOAD_MAX_SECONDS <= 0:
+        UPLOAD_MAX_SECONDS = None
+except ValueError:
+    UPLOAD_MAX_SECONDS = None
 UPLOAD_DIRECT_DETECT_MAX_BYTES = int(os.getenv("UPLOAD_DIRECT_DETECT_MAX_BYTES", str(25 * 1024 * 1024)))
 UPLOAD_USE_SAMPLE_EVENTS = os.getenv("UPLOAD_USE_SAMPLE_EVENTS", "false").lower() in {"1", "true", "yes"}
 
@@ -40,7 +46,7 @@ class UploadJob:
     completed_at: str | None = None
     error: str | None = None
     events_path: str | None = None
-    analysis_window_seconds: float = UPLOAD_MAX_SECONDS
+    analysis_window_seconds: float | None = UPLOAD_MAX_SECONDS
     total_cameras: int = 0
     processed_cameras: int = 0
     current_camera: str | None = None

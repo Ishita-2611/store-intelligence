@@ -8,7 +8,7 @@ This repository is configured around the latest provided challenge resources:
 - `data/store_layout.json` is an inferred `ST1076` layout based on the cameras and zones present in the new sample events.
 - `data/store_layouts/store_1.json` and `data/store_layouts/store_2.json` map the actual Store 1 and Store 2 CCTV zip camera names to detector zones.
 - The supplied POS rows are for `ST1008`, while the supplied sample-event stream is for `ST1076`. The API and parser support both files, but the default live demo uses the `ST1076` event stream as the authoritative dataset because there is no matching `ST1076` POS file in the provided resources.
-- The default detector runs on CPU with OpenCV for reproducible Docker deployment. For stronger local person detection, install `requirements-ml.txt`; the same pipeline will use YOLOv8 automatically when `ultralytics` is available.
+- The detector uses YOLOv8 automatically when `ultralytics` is available and selects CUDA when PyTorch reports a GPU; otherwise it falls back to OpenCV HOG and motion detection.
 
 ## Part A: Detection Pipeline
 
@@ -108,7 +108,7 @@ python -m pipeline.detect --video-zip "D:\downloads\Store 1-20260602T101818Z-3-0
 Production behaviors currently included:
 
 - Docker entrypoint and Render-friendly `PORT` handling.
-- Slim API dependencies in `requirements-api.txt`; local detection/test dependencies in `requirements.txt`.
+- Docker Compose can build with ML dependencies and request GPU devices for complete-footage detection jobs.
 - Structured JSON request logs with `trace_id`, `store_id`, endpoint, latency, event count, and status code.
 - Idempotent ingest by `event_id`.
 - Partial-success ingest responses for malformed event batches.
@@ -133,7 +133,7 @@ The dashboard is served by the same FastAPI app:
 http://127.0.0.1:8000/dashboard
 ```
 
-The dashboard has reliable simulated real-time demos for the hosted environment: `Replay sample` streams the provided `ST1076` sample-event resource, `Replay Store 1 all` streams the complete `data/store_1_events.jsonl` file, and `Replay camera` streams one preprocessed Store 1 camera at a time from that same file. The Store 1 JSONL was preprocessed offline from the supplied Store 1 CCTV zip because that raw zip is too large for hosted browser upload. Raw CCTV upload still supports smaller Store 1 and Store 2 ZIP/MP4 files; uploaded events report `STORE_1` or `STORE_2`, and the dashboard switches analytics to that uploaded store automatically. Hosted uploads run a short default smoke window of 5 seconds per camera with stride 45 so Render can finish quickly; set `UPLOAD_MAX_SECONDS` and `UPLOAD_SAMPLE_STRIDE` for deeper local analysis.
+The dashboard has reliable simulated real-time demos for the hosted environment: `Replay sample` streams the provided `ST1076` sample-event resource, `Replay Store 1 all` streams the complete `data/store_1_events.jsonl` file, and `Replay camera` streams one preprocessed Store 1 camera at a time from that same file. The Store 1 JSONL was preprocessed offline from the supplied Store 1 CCTV zip because that raw zip is too large for hosted browser upload. Raw CCTV upload still supports smaller Store 1 and Store 2 ZIP/MP4 files; uploaded events report `STORE_1` or `STORE_2`, and the dashboard switches analytics to that uploaded store automatically. Uploaded raw footage is analyzed completely by default with stride 45; set `UPLOAD_MAX_SECONDS` to a positive value only when you intentionally want a shorter smoke run, and set `UPLOAD_SAMPLE_STRIDE` for deeper or faster local analysis.
 
 Run tests:
 

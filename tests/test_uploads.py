@@ -132,7 +132,7 @@ def test_reset_cancels_queued_upload_before_processing() -> None:
     assert upload_controller.latest() is None
 
 
-def test_uploaded_detector_uses_bounded_analysis_window(monkeypatch, tmp_path) -> None:
+def test_uploaded_detector_analyzes_complete_footage_by_default(monkeypatch, tmp_path) -> None:
     captured = {}
     source_zip = tmp_path / "clip.zip"
     with zipfile.ZipFile(source_zip, "w") as archive:
@@ -156,7 +156,7 @@ def test_uploaded_detector_uses_bounded_analysis_window(monkeypatch, tmp_path) -
     assert captured["job_id"] == "bounded"
     assert captured["generation"] == generation
     assert upload_controller.status("bounded")["status"] == "completed"
-    assert upload_controller.status("bounded")["analysis_window_seconds"] == 5.0
+    assert upload_controller.status("bounded")["analysis_window_seconds"] is None
 
 
 def test_store_upload_status_reports_selected_store(monkeypatch, tmp_path) -> None:

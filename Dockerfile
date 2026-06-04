@@ -9,8 +9,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements-api.txt .
-RUN pip install --no-cache-dir -r requirements-api.txt
+COPY requirements.txt requirements-ml.txt .
+ARG INSTALL_GPU=false
+RUN if [ "$INSTALL_GPU" = "true" ]; then \
+        pip install --no-cache-dir -r requirements-ml.txt; \
+    else \
+        pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-ml.txt; \
+    fi
 
 COPY app ./app
 COPY pipeline ./pipeline
