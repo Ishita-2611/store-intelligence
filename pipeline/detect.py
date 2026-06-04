@@ -236,11 +236,7 @@ def _yolo_detections(frame: np.ndarray, scale: float, camera_cfg: dict[str, Any]
 
     min_confidence = float(camera_cfg.get("yolo_min_confidence", 0.25))
     small = cv2.resize(frame, None, fx=scale, fy=scale)
-    predict_kwargs: dict[str, Any] = {"classes": [0], "conf": min_confidence, "verbose": False}
-    yolo_device = camera_cfg.get("yolo_device") or os.getenv("YOLO_DEVICE")
-    if yolo_device:
-        predict_kwargs["device"] = str(yolo_device)
-    results = model.predict(small, **predict_kwargs)
+    results = model.predict(small, classes=[0], conf=min_confidence, verbose=False)
     detections: list[tuple[BBox, float]] = []
     for result in results:
         for box in result.boxes:

@@ -171,7 +171,6 @@ def test_process_video_runs_with_mocked_capture(tmp_path, monkeypatch) -> None:
 
 def test_yolo_detector_path_is_used_when_available(monkeypatch) -> None:
     detect._load_yolo_model.cache_clear()
-    captured = {}
 
     class FakeTensor:
         def __init__(self, values):
@@ -191,14 +190,12 @@ def test_yolo_detector_path_is_used_when_available(monkeypatch) -> None:
         boxes = [FakeBox()]
 
     class FakeModel:
-        def predict(self, *_args, **kwargs):
-            captured.update(kwargs)
+        def predict(self, *_args, **_kwargs):
             return [FakeResult()]
 
     monkeypatch.setattr(detect, "_load_yolo_model", lambda _model_name: FakeModel())
 
     frame = np.zeros((240, 320, 3), dtype=np.uint8)
-    detections = detect._yolo_detections(frame, 0.5, {"yolo_model": "fake.pt", "yolo_device": "cuda:0"})
+    detections = detect._yolo_detections(frame, 0.5, {"yolo_model": "fake.pt"})
 
     assert detections == [((20, 40, 100, 200), 0.88)]
-    assert captured["device"] == "cuda:0"

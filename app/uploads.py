@@ -19,19 +19,11 @@ from pipeline.detect import extract_zip_member
 from pipeline.layouts import camera_key_for_name, layout_path_for_zip
 
 
-def upload_max_seconds_from_env() -> float | None:
-    raw_value = os.getenv("UPLOAD_MAX_SECONDS", "").strip()
-    if not raw_value:
-        return None
-    value = float(raw_value)
-    return value if value > 0 else None
-
-
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "outputs/uploads"))
 LAYOUT_PATH = Path("data/store_layout.json")
 DEMO_EVENTS_PATH = Path("data/sample_events.jsonl")
 UPLOAD_SAMPLE_STRIDE = int(os.getenv("UPLOAD_SAMPLE_STRIDE", "45"))
-UPLOAD_MAX_SECONDS = upload_max_seconds_from_env()
+UPLOAD_MAX_SECONDS = float(os.getenv("UPLOAD_MAX_SECONDS", "5"))
 UPLOAD_DIRECT_DETECT_MAX_BYTES = int(os.getenv("UPLOAD_DIRECT_DETECT_MAX_BYTES", str(25 * 1024 * 1024)))
 UPLOAD_USE_SAMPLE_EVENTS = os.getenv("UPLOAD_USE_SAMPLE_EVENTS", "false").lower() in {"1", "true", "yes"}
 
@@ -48,7 +40,7 @@ class UploadJob:
     completed_at: str | None = None
     error: str | None = None
     events_path: str | None = None
-    analysis_window_seconds: float | None = UPLOAD_MAX_SECONDS
+    analysis_window_seconds: float = UPLOAD_MAX_SECONDS
     total_cameras: int = 0
     processed_cameras: int = 0
     current_camera: str | None = None
