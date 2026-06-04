@@ -1,4 +1,1 @@
 [run]
-omit =
-    pipeline/detect.py
-

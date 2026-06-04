@@ -64,3 +64,17 @@ def test_canonical_events_pass_through_and_unknown_events_are_unchanged() -> Non
 
     assert normalize_event(canonical) is canonical
     assert normalize_event(unknown) == unknown
+
+
+def test_preserves_named_store_ids_from_acceptance_gate() -> None:
+    normalized = normalize_event(
+        {
+            "event_type": "entry",
+            "id_token": "ID_1",
+            "store_id": "STORE_BLR_002",
+            "camera_id": "cam1",
+            "event_timestamp": "2026-06-02T10:00:00Z",
+        }
+    )
+
+    assert normalized["store_id"] == "STORE_BLR_002"

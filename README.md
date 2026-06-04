@@ -8,6 +8,7 @@ This repository is configured around the latest provided challenge resources:
 - `data/store_layout.json` is an inferred `ST1076` layout based on the cameras and zones present in the new sample events.
 - `data/store_layouts/store_1.json` and `data/store_layouts/store_2.json` map the actual Store 1 and Store 2 CCTV zip camera names to detector zones.
 - The supplied POS rows are for `ST1008`, while the supplied sample-event stream is for `ST1076`. The API and parser support both files, but the default live demo uses the `ST1076` event stream as the authoritative dataset because there is no matching `ST1076` POS file in the provided resources.
+- The default detector runs on CPU with OpenCV for reproducible Docker deployment. For stronger local person detection, install `requirements-ml.txt`; the same pipeline will use YOLOv8 automatically when `ultralytics` is available.
 
 ## Part A: Detection Pipeline
 
@@ -89,6 +90,13 @@ cd store-intelligence
 pip install -r requirements.txt
 python -m pytest
 uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+Optional stronger local detector:
+
+```powershell
+pip install -r requirements-ml.txt
+python -m pipeline.detect --video-zip "D:\downloads\Store 1-20260602T101818Z-3-001ec38db8.zip" --pos-csv data\pos_transactions.csv --out outputs\detected_events.jsonl
 ```
 
 Production behaviors currently included:

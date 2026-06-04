@@ -3,9 +3,11 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import tempfile
 import zipfile
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -114,9 +116,12 @@ def detect_people(
     camera_cfg: dict[str, Any],
 ) -> list[tuple[BBox, float]]:
     scale = float(camera_cfg.get("detector_scale", 0.5))
+    detections = _yolo_detections(frame, scale, camera_cfg)
+    if len(detections) >= int(camera_cfg.get("min_expected_detections", 1)):
+        return non_max_suppression(detections, overlap_threshold=0.45)
+
     small = cv2.resize(frame, None, fx=scale, fy=scale)
     rects, weights = _hog_detections(hog, small)
-    detections: list[tuple[BBox, float]] = []
     for (x, y, w, h), weight in zip(rects, weights):
         if h < 70 * scale:
             continue
@@ -221,6 +226,38 @@ def _event(
 def _hog_detections(hog: cv2.HOGDescriptor, frame: np.ndarray) -> tuple[list[BBox], list[float]]:
     rects, weights = hog.detectMultiScale(frame, winStride=(8, 8), padding=(8, 8), scale=1.05)
     return [tuple(map(int, rect)) for rect in rects], [float(w) for w in weights]
+
+
+def _yolo_detections(frame: np.ndarray, scale: float, camera_cfg: dict[str, Any]) -> list[tuple[BBox, float]]:
+    model = _load_yolo_model(str(camera_cfg.get("yolo_model", "yolov8n.pt")))
+    if model is None:
+        return []
+
+    min_confidence = float(camera_cfg.get("yolo_min_confidence", 0.25))
+    small = cv2.resize(frame, None, fx=scale, fy=scale)
+    results = model.predict(small, classes=[0], conf=min_confidence, verbose=False)
+    detections: list[tuple[BBox, float]] = []
+    for result in results:
+        for box in result.boxes:
+            x1, y1, x2, y2 = [float(v) for v in box.xyxy[0]]
+            width = max(0.0, x2 - x1)
+            height = max(0.0, y2 - y1)
+            if height < 70 * scale:
+                continue
+            confidence = float(box.conf[0])
+            detections.append((_rescale_bbox((int(x1), int(y1), int(width), int(height)), 1 / scale), min(max(confidence, 0.0), 1.0)))
+    return detections
+
+
+@lru_cache(maxsize=2)
+def _load_yolo_model(model_name: str) -> Any | None:
+    if os.getenv("DISABLE_YOLO", "").lower() in {"1", "true", "yes"}:
+        return None
+    try:
+        from ultralytics import YOLO
+    except ImportError:
+        return None
+    return YOLO(model_name)
 
 
 def load_pos_times(path: str) -> dict[str, list[datetime]]:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from datetime import datetime
 from typing import Any
 
@@ -59,7 +60,7 @@ def first_present(raw: dict[str, Any], *keys: str) -> Any:
 
 def normalize_store_id(value: Any) -> str:
     text = str(value)
-    if text.lower().startswith("store_"):
+    if re.match(r"^store_\d+$", text.lower()):
         return f"ST{text.split('_', 1)[1]}"
     return text
 
