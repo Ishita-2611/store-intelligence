@@ -1,5 +1,7 @@
 const defaultStoreId = "ST1076";
 const numberFmt = new Intl.NumberFormat("en-IN");
+const maxHostedZipBytes = 50 * 1024 * 1024;
+const maxHostedMp4Bytes = 120 * 1024 * 1024;
 let localUploadNotice = null;
 
 const els = {
@@ -76,6 +78,16 @@ els.uploadForm.addEventListener("submit", async (event) => {
   const file = els.cctvFile.files[0];
   if (!file) {
     renderUpload({ status: "idle" }, "Select a CCTV ZIP or MP4 file first.");
+    return;
+  }
+  const limit = file.name.toLowerCase().endsWith(".zip") ? maxHostedZipBytes : maxHostedMp4Bytes;
+  if (file.size > limit) {
+    localUploadNotice = {
+      status: "failed",
+      filename: file.name,
+      error: `${formatBytes(file.size)} is too large for hosted browser upload. Use Replay sample for the deployed demo, upload a smaller MP4 clip, or run the full ZIP locally through the backend.`,
+    };
+    renderUpload(localUploadNotice);
     return;
   }
 
