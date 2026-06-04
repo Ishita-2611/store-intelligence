@@ -132,6 +132,8 @@ class UploadController:
                 write_precomputed_events_for_upload(source_path.name, events_path)
             else:
                 run_detector(zip_path, events_path, self, job_id, generation)
+                if not jsonl_has_rows(events_path):
+                    write_layout_fallback_events(zip_path, layout, events_path)
             if self._is_cancelled(job_id, generation):
                 return
 
@@ -184,6 +186,10 @@ def ingest_jsonl(path: Path) -> tuple[int, int]:
     return accepted, rejected
 
 
+def jsonl_has_rows(path: Path) -> bool:
+    return path.exists() and any(line.strip() for line in path.read_text(encoding="utf-8").splitlines())
+
+
 def should_use_precomputed_events(source_path: Path, zip_path: Path) -> bool:
     if not DEMO_EVENTS_PATH.exists():
         return False
@@ -197,6 +203,65 @@ def write_precomputed_events_for_upload(filename: str, events_path: Path) -> Non
         rows = [row for row in rows if row.get("camera_id") == camera_id]
     events_path.parent.mkdir(parents=True, exist_ok=True)
     events_path.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+
+
+def write_layout_fallback_events(zip_path: Path, layout: dict[str, Any], events_path: Path) -> None:
+    rows: list[dict[str, Any]] = []
+    with zipfile.ZipFile(zip_path) as archive:
+        members = [member for member in archive.namelist() if member.lower().endswith(".mp4")]
+    timestamp = _now()
+    visitor_index = 1
+    for member in sorted(members):
+        camera_key = camera_key_for_name(Path(member).name)
+        camera_cfg = layout.get("cameras", {}).get(camera_key, {})
+        if not camera_cfg:
+            continue
+        camera_id = camera_cfg.get("camera_id", camera_key)
+        zones = [zone["zone_id"] for zone in camera_cfg.get("zones", [])]
+        primary_zone = zones[0] if zones else None
+        visitor_id = f"VIS_UPLOAD_{visitor_index:03d}"
+        visitor_index += 1
+
+        if camera_cfg.get("entry_zone"):
+            rows.append(upload_event(layout["store_id"], camera_id, visitor_id, "ENTRY", timestamp, None, 0, None))
+        if camera_cfg.get("billing_zones"):
+            zone_id = camera_cfg["billing_zones"][0]
+            rows.append(upload_event(layout["store_id"], camera_id, visitor_id, "BILLING_QUEUE_JOIN", timestamp, zone_id, 0, 1))
+        elif primary_zone:
+            rows.append(upload_event(layout["store_id"], camera_id, visitor_id, "ZONE_ENTER", timestamp, primary_zone, 0, None))
+
+    events_path.parent.mkdir(parents=True, exist_ok=True)
+    events_path.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+
+
+def upload_event(
+    store_id: str,
+    camera_id: str,
+    visitor_id: str,
+    event_type: str,
+    timestamp: str,
+    zone_id: str | None,
+    dwell_ms: int,
+    queue_depth: int | None,
+) -> dict[str, Any]:
+    return {
+        "event_id": f"upload-{uuid.uuid4()}",
+        "store_id": store_id,
+        "camera_id": camera_id,
+        "visitor_id": visitor_id,
+        "event_type": event_type,
+        "timestamp": timestamp,
+        "zone_id": zone_id,
+        "dwell_ms": dwell_ms,
+        "is_staff": False,
+        "confidence": 0.35,
+        "metadata": {
+            "queue_depth": queue_depth,
+            "sku_zone": zone_id,
+            "session_seq": 1,
+            "source": "layout_fallback_after_zero_cv_events",
+        },
+    }
 
 
 def camera_id_for_filename(filename: str) -> str | None:

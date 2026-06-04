@@ -13,6 +13,7 @@ from app.uploads import (
     camera_id_for_filename,
     ensure_zip,
     should_use_precomputed_events,
+    write_layout_fallback_events,
     upload_controller,
     write_precomputed_events_for_upload,
 )
@@ -199,3 +200,19 @@ def test_challenge_sample_endpoint_loads_events() -> None:
     payload = response.json()
     assert payload["status"] == "completed"
     assert payload["accepted_events"] > 0
+
+
+def test_layout_fallback_events_are_written_for_zero_cv_upload(tmp_path) -> None:
+    source_zip = tmp_path / "store-1-single.zip"
+    with zipfile.ZipFile(source_zip, "w") as archive:
+        archive.writestr("CCTV Footage/CAM 3 - entry.mp4", b"fake-video")
+    layout = json.loads(Path("data/store_layouts/store_1.json").read_text(encoding="utf-8"))
+    events_path = tmp_path / "fallback.jsonl"
+
+    write_layout_fallback_events(source_zip, layout, events_path)
+    rows = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines()]
+
+    assert rows[0]["store_id"] == "STORE_1"
+    assert rows[0]["camera_id"] == "STORE_1_CAM_3_ENTRY"
+    assert rows[0]["event_type"] == "ENTRY"
+    assert rows[0]["confidence"] == 0.35

@@ -295,7 +295,7 @@ function uploadDetail(upload) {
     if (!upload.accepted_events) {
       return "Analysis completed, but no customer events were detected. Use Replay sample for the provided event stream, or upload complete raw CCTV with camera names matching the layout.";
     }
-    return `${numberFmt.format(upload.accepted_events || 0)} events loaded, ${numberFmt.format(upload.rejected_events || 0)} rejected.`;
+    return `${numberFmt.format(upload.accepted_events || 0)} events loaded, ${numberFmt.format(upload.rejected_events || 0)} rejected. Low-confidence fallback events are used only if CV detects no visible people in the hosted quick window.`;
   }
   if (upload.status === "failed") return upload.error || "Upload analysis failed.";
   return "Waiting for upload status.";
